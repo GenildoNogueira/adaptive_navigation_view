@@ -1,0 +1,42 @@
+name: adaptive_navigation_view
+description: "A new Flutter package project."
+version: 0.0.1
+repository: https://github.com/GenildoNogueira/adaptive_navigation_view
+issue_tracker: https://github.com/GenildoNogueira/adaptive_navigation_view/issues
+
+false_secrets:
+  - example/**
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: ">=3.7.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+screenshots:
+  - description: 'Minimal Panel - Left'
+    path: screenshot/1.png
+  - description: 'Minimal Panel - Right'
+    path: screenshot/2.png
+  - description: 'Medium Panel - Left'
+    path: screenshot/3.png
+  - description: 'Medium Panel - Right'
+    path: screenshot/4.png
+  - description: 'Medium Panel'
+    path: screenshot/5.png
+  - description: 'Medium Panel'
+    path: screenshot/6.png
+  - description: 'Expanded Panel - Left'
+    path: screenshot/7.png
+  - description: 'Expanded Panel - Right'
+    path: screenshot/8.png
+
+
+flutter:
