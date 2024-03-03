@@ -1,6 +1,6 @@
 name: adaptive_navigation_view
-description: "A new Flutter package project."
-version: 0.0.1
+description: "A Flutter package for creating adaptive navigation views that seamlessly adapt to different platforms and devices."
+version: 1.0.0
 repository: https://github.com/GenildoNogueira/adaptive_navigation_view
 issue_tracker: https://github.com/GenildoNogueira/adaptive_navigation_view/issues
 
@@ -37,6 +37,5 @@ screenshots:
     path: screenshot/7.png
   - description: 'Expanded Panel - Right'
     path: screenshot/8.png
-
 
 flutter:
