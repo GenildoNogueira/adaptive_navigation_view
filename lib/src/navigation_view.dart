@@ -163,11 +163,15 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         looseConstraints.tighten(width: size.width);
     final double height = size.height;
 
-    final isDisplayModeOpen = displayMode == DisplayMode.expanded;
-    final isDisplayModeCompact = displayMode == DisplayMode.medium;
+    final isDisplayModeExpanded = displayMode == DisplayMode.expanded;
+    final isDisplayModeMedium = displayMode == DisplayMode.medium;
     final isDisplayModeMinimal = displayMode == DisplayMode.minimal;
 
+    final paddingLeft = math.max(minViewPadding.left, 0.0);
+    final paddingRight = math.max(minViewPadding.right, 0.0);
+
     double contentTop = 0.0;
+    double offsetSafeAreaForPane = 0.0;
     const double bottomWidgetsHeight = 0.0;
     double paneWidgetsWidth = 0.0;
     double appBarHeight = 0.0;
@@ -189,13 +193,13 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       positionChild(_NavigationViewSlot.appBar, Offset.zero);
     }
 
-    final navigationPaneDirection = switch (textDirection) {
+    final paneDirectionRTL = switch (textDirection) {
       TextDirection.rtl => true,
       TextDirection.ltr => false,
     };
 
     if (hasChild(_NavigationViewSlot.navigationPane)) {
-      if (!isOpenPane && isDisplayModeCompact) {
+      if (!isOpenPane && isDisplayModeMedium) {
         navigationMaxWidth = lerpDouble(
               compactPaneMaxWidth,
               openPaneMaxWidth,
@@ -203,7 +207,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
             ) ??
             compactPaneMaxWidth;
       }
-      if (isOpenPane && isDisplayModeCompact) {
+      if (isOpenPane && isDisplayModeMedium) {
         navigationMaxWidth = lerpDouble(
               compactPaneMaxWidth,
               openPaneMaxWidth,
@@ -211,9 +215,11 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
             ) ??
             openPaneMaxWidth;
       }
-      if (isDisplayModeOpen) {
+      if (isDisplayModeExpanded) {
         navigationMaxWidth = openPaneMaxWidth;
       }
+
+      offsetSafeAreaForPane = paneDirectionRTL ? paddingLeft : paddingRight;
 
       final BoxConstraints compactPaneConstraints = BoxConstraints(
         maxWidth: navigationMaxWidth,
@@ -221,7 +227,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       );
       final double compactPaneWidth = layoutChild(
         _NavigationViewSlot.navigationPane,
-        isDisplayModeCompact || isDisplayModeOpen
+        isDisplayModeMedium || isDisplayModeExpanded
             ? compactPaneConstraints
             : BoxConstraints.tight(size),
       ).width;
@@ -235,7 +241,9 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         isDisplayModeMinimal
             ? Offset.zero
             : Offset(
-                navigationPaneDirection ? size.width - paneWidgetsWidth : 0.0,
+                paneDirectionRTL
+                    ? size.width - paneWidgetsWidth - offsetSafeAreaForPane
+                    : offsetSafeAreaForPane,
                 contentTop,
               ),
       );
@@ -251,7 +259,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
 
     // Set the content pane to account for the greater of the width
     final double contentPane = math.max(
-      paneWidgetsWidth,
+      paneWidgetsWidth + offsetSafeAreaForPane,
       0.0,
     );
 
@@ -270,7 +278,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       layoutChild(_NavigationViewSlot.body, bodyConstraints);
       positionChild(
         _NavigationViewSlot.body,
-        Offset(navigationPaneDirection ? 0.0 : contentPane, contentTop),
+        Offset(paneDirectionRTL ? 0.0 : contentPane, contentTop),
       );
     }
 

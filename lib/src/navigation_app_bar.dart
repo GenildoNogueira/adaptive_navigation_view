@@ -357,7 +357,7 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
           surfaceTintColor:
               appBarTheme.surfaceTintColor ?? defaults.surfaceTintColor,
           child: Padding(
-            padding: EdgeInsetsDirectional.only(top: viewPadding.top),
+            padding: viewPadding,
             child: Semantics(
               explicitChildNodes: true,
               child: appBar,

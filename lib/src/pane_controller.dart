@@ -236,30 +236,26 @@ class NavigationPane extends StatelessWidget {
           clipBehavior: effectiveMinimalShape != null || effectiveShape != null
               ? (clipBehavior ?? Clip.hardEdge)
               : Clip.none,
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: ListView(
-              children: [
-                if (isDisplayModeMinimal)
-                  Align(
-                    alignment: switch (Directionality.of(context)) {
-                      TextDirection.rtl => Alignment.centerRight,
-                      TextDirection.ltr => Alignment.centerLeft,
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0,
-                        vertical: 10,
-                      ),
-                      child: PaneButton(
-                        isClose: navigationViewScope.isPaneOpen,
-                      ),
+          child: ListView(
+            children: [
+              if (isDisplayModeMinimal)
+                Align(
+                  alignment: switch (Directionality.of(context)) {
+                    TextDirection.rtl => Alignment.centerRight,
+                    TextDirection.ltr => Alignment.centerLeft,
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0,
+                      vertical: 10,
+                    ),
+                    child: PaneButton(
+                      isClose: navigationViewScope.isPaneOpen,
                     ),
                   ),
-                ...wrappedChildren,
-              ],
-            ),
+                ),
+              ...wrappedChildren,
+            ],
           ),
         ),
       ),
@@ -788,11 +784,7 @@ class PaneControllerState extends State<PaneController>
                     child: MouseRegion(
                       cursor: _paneCursor,
                       child: Container(
-                        width: isDisplayModeCompact && isDesktop
-                            ? dragAreaWidth != null
-                                ? (dragAreaWidth / 2)
-                                : null
-                            : dragAreaWidth,
+                        width: 15,
                       ),
                     ),
                   ),
