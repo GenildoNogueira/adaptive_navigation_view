@@ -1,4 +1,4 @@
-## [1.0.3]
+## [1.1.0]
 
 ### Feat
 - Added `footers` property to Navigation Pane for displaying additional widgets after the main navigation items.
