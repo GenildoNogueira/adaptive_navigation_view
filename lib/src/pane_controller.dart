@@ -32,6 +32,7 @@ class NavigationPane extends StatelessWidget {
     this.indicatorColor,
     this.indicatorShape,
     required this.children,
+    this.footers,
     required this.selectedIndex,
     this.onDestinationSelected,
     this.tilePadding,
@@ -93,6 +94,12 @@ class NavigationPane extends StatelessWidget {
   /// The list contains [PaneItemDestination] widgets and/or customized
   /// widgets like headlines and dividers.
   final List<Widget> children;
+
+  /// Additional widgets displayed at the bottom of the navigation drawer.
+  ///
+  /// These widgets are typically used for footers or additional controls that
+  /// should appear at the bottom of the navigation drawer.
+  final List<Widget>? footers;
 
   /// The index into destinations for the current selected
   /// [PaneItemDestination] or null if no destination is selected.
@@ -176,7 +183,8 @@ class NavigationPane extends StatelessWidget {
     final ShapeBorder? effectiveMinimalShape =
         minimalShape ?? (paneTheme?.minimalShape ?? defaults.minimalShape);
     final int totalNumberOfDestinations =
-        children.whereType<PaneItemDestination>().toList().length;
+        children.whereType<PaneItemDestination>().toList().length +
+            (footers?.whereType<PaneItemDestination>().toList().length ?? 0);
 
     int destinationIndex = 0;
     final List<Widget> wrappedChildren = <Widget>[];
@@ -211,6 +219,18 @@ class NavigationPane extends StatelessWidget {
       }
     }
 
+    final List<Widget> wrappedFooters = <Widget>[];
+    if (footers != null && footers!.isNotEmpty) {
+      for (int i = 0; i < footers!.length; i++) {
+        if (footers![i] is! PaneItemDestination) {
+          wrappedFooters.add(footers![i]);
+        } else {
+          wrappedFooters.add(wrapChild(footers![i], destinationIndex));
+          destinationIndex += 1;
+        }
+      }
+    }
+
     return Semantics(
       scopesRoute: true,
       namesRoute: true,
@@ -236,25 +256,34 @@ class NavigationPane extends StatelessWidget {
           clipBehavior: effectiveMinimalShape != null || effectiveShape != null
               ? (clipBehavior ?? Clip.hardEdge)
               : Clip.none,
-          child: ListView(
+          child: Column(
             children: [
-              if (isDisplayModeMinimal)
-                Align(
-                  alignment: switch (Directionality.of(context)) {
-                    TextDirection.rtl => Alignment.centerRight,
-                    TextDirection.ltr => Alignment.centerLeft,
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0,
-                      vertical: 10,
-                    ),
-                    child: PaneButton(
-                      isClose: navigationViewScope.isPaneOpen,
-                    ),
-                  ),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (isDisplayModeMinimal)
+                      Align(
+                        alignment: switch (Directionality.of(context)) {
+                          TextDirection.rtl => Alignment.centerRight,
+                          TextDirection.ltr => Alignment.centerLeft,
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 10,
+                          ),
+                          child: PaneButton(
+                            isClose: navigationViewScope.isPaneOpen,
+                          ),
+                        ),
+                      ),
+                    ...wrappedChildren,
+                  ],
                 ),
-              ...wrappedChildren,
+              ),
+              ...wrappedFooters,
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -465,11 +494,13 @@ class PaneControllerState extends State<PaneController>
 
   /// Use this property to customize how the pane will be displayed.
   /// [PaneDisplayMode.auto] is used by default.
-  DisplayMode get displayMode => _NavigationViewScope.of(context).displayMode;
+  DisplayMode get displayMode => mounted
+      ? _NavigationViewScope.of(context).displayMode
+      : DisplayMode.minimal;
 
   bool get isDisplayModeMinimal => displayMode == DisplayMode.minimal;
   bool get isDisplayModeCompact => displayMode == DisplayMode.medium;
-  bool get isDisplayModeOpen => displayMode == DisplayMode.expanded;
+  bool get isDisplayModeExpanded => displayMode == DisplayMode.expanded;
 
   SystemMouseCursor _paneCursor = SystemMouseCursors.resizeColumn;
 
@@ -760,7 +791,7 @@ class PaneControllerState extends State<PaneController>
                 alignment: _paneOuterAlignment,
                 child: Align(
                   alignment: _paneInnerAlignment,
-                  widthFactor: isDisplayModeCompact || isDisplayModeOpen
+                  widthFactor: isDisplayModeCompact || isDisplayModeExpanded
                       ? null
                       : _controller.value,
                   child: RepaintBoundary(
@@ -865,13 +896,13 @@ class _PaneDefaults extends PaneThemeData {
   Size? get indicatorSize => const Size.fromHeight(36.0);
 
   @override
-  MaterialStateProperty<IconThemeData?>? get iconTheme {
-    return MaterialStateProperty.resolveWith((Set<MaterialState> states) {
+  WidgetStateProperty<IconThemeData?>? get iconTheme {
+    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
       return IconThemeData(
         size: 24.0,
-        color: states.contains(MaterialState.disabled)
+        color: states.contains(WidgetState.disabled)
             ? _colors.onSurfaceVariant.withOpacity(0.38)
-            : states.contains(MaterialState.selected)
+            : states.contains(WidgetState.selected)
                 ? _colors.onSecondaryContainer
                 : _colors.onSurfaceVariant,
       );
@@ -879,13 +910,13 @@ class _PaneDefaults extends PaneThemeData {
   }
 
   @override
-  MaterialStateProperty<TextStyle?>? get labelTextStyle {
-    return MaterialStateProperty.resolveWith((Set<MaterialState> states) {
+  WidgetStateProperty<TextStyle?>? get labelTextStyle {
+    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
       final TextStyle style = _textTheme.labelLarge!;
       return style.apply(
-        color: states.contains(MaterialState.disabled)
+        color: states.contains(WidgetState.disabled)
             ? _colors.onSurfaceVariant.withOpacity(0.38)
-            : states.contains(MaterialState.selected)
+            : states.contains(WidgetState.selected)
                 ? _colors.onSecondaryContainer
                 : _colors.onSurfaceVariant,
       );

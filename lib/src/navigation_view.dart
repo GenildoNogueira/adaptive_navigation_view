@@ -42,6 +42,13 @@ enum DisplayMode {
   minimal,
 }
 
+class WidthBreakpoint {
+  final double? begin;
+  final double? end;
+
+  const WidthBreakpoint({this.begin, this.end});
+}
+
 enum _NavigationViewSlot {
   body,
   appBar,
@@ -49,11 +56,11 @@ enum _NavigationViewSlot {
   statusBar,
 }
 
-// Used to communicate the height of the Scaffold's bottomNavigationBar and
-// persistentFooterButtons to the LayoutBuilder which builds the Scaffold's body.
+// Used to communicate the height of the Navigation's bottomNavigationBar and
+// persistentFooterButtons to the LayoutBuilder which builds the Navigation's body.
 //
-// Scaffold expects a _BodyBoxConstraints to be passed to the _BodyBuilder
-// widget's LayoutBuilder, see _ScaffoldLayout.performLayout(). The BoxConstraints
+// Navigation expects a _BodyBoxConstraints to be passed to the _BodyBuilder
+// widget's LayoutBuilder, see _NavigationLayout.performLayout(). The BoxConstraints
 // methods that construct new BoxConstraints objects, like copyWith() have not
 // been overridden here because we expect the _BodyBoxConstraintsObject to be
 // passed along unmodified to the LayoutBuilder. If that changes in the future
@@ -319,8 +326,9 @@ class NavigationView extends StatefulWidget {
     this.paneScrimColor,
     this.paneEdgeDragWidth,
     this.paneEnableOpenDragGesture = true,
-    this.compactBreakpoint = 600,
-    this.expandedBreakpoint = 1200,
+    this.compactBreakpoint = const WidthBreakpoint(end: 600),
+    this.mediumBreakpoint = const WidthBreakpoint(begin: 600, end: 840),
+    this.expandedBreakpoint = const WidthBreakpoint(begin: 840),
   });
 
   /// An [NavigationAppBar] to display at the top of the NavigationView.
@@ -352,14 +360,14 @@ class NavigationView extends StatefulWidget {
   /// i.e. it is not inset by `viewInsets.bottom`.
   ///
   /// The widget in the body of the NavigationView is positioned at the top-left of
-  /// the available space between the app bar and the bottom of the scaffold. To
+  /// the available space between the app bar and the bottom of the navigation. To
   /// center this widget instead, consider putting it in a [Center] widget and
   /// having that be the body. To expand this widget instead, consider
   /// putting it in a [SizedBox.expand].
   ///
   /// If you have a column of widgets that should normally fit on the screen,
   /// but may overflow and would in such cases need to scroll, consider using a
-  /// [ListView] as the body of the scaffold. This is also a good choice for
+  /// [ListView] as the body of the navigation. This is also a good choice for
   /// the case where your body is a scrollable list.
   final Widget? body;
 
@@ -377,12 +385,12 @@ class NavigationView extends StatefulWidget {
   /// The theme's [Theme.colorSchema.background] by default.
   final Color? backgroundColor;
 
-  /// If true the [body] and the scaffold's floating widgets should size
+  /// If true the [body] and the navigation's floating widgets should size
   /// themselves to avoid the onscreen keyboard whose height is defined by the
   /// ambient [MediaQuery]'s [MediaQueryData.viewInsets] `bottom` property.
   ///
   /// For example, if there is an onscreen keyboard displayed above the
-  /// scaffold, the body can be resized to avoid overlapping the keyboard, which
+  /// navigation, the body can be resized to avoid overlapping the keyboard, which
   /// prevents widgets inside the body from being obscured by the keyboard.
   ///
   /// Defaults to true.
@@ -419,11 +427,15 @@ class NavigationView extends StatefulWidget {
 
   /// The breakpoint value at which the navigation pane switches to compact mode.
   /// When the width is less than 600, the navigation pane is in compact mode.
-  final double compactBreakpoint;
+  final WidthBreakpoint compactBreakpoint;
+
+  /// The breakpoint value at which the navigation pane switches to medium mode.
+  /// When the width is between 600 (inclusive) and 840 (exclusive), the navigation pane is in medium mode.
+  final WidthBreakpoint mediumBreakpoint;
 
   /// The breakpoint value at which the navigation pane switches to expanded mode.
   /// When the width is between 840 (inclusive) and 1200 (exclusive), the navigation pane is in expanded mode.
-  final double expandedBreakpoint;
+  final WidthBreakpoint expandedBreakpoint;
 
   /// Finds the [NavigationViewState] from the closest instance of this class that
   /// encloses the given context.
@@ -433,23 +445,15 @@ class NavigationView extends StatefulWidget {
   ///
   /// This method can be expensive (it walks the element tree).
   ///
-  /// {@tool dartpad}
   /// Typical usage of the [NavigationView.of] function is to call it from within the
   /// `build` method of a child of a [NavigationView].
   ///
-  /// ** See code in examples/api/lib/material/scaffold/scaffold.of.0.dart **
-  /// {@end-tool}
-  ///
-  /// {@tool dartpad}
   /// When the [NavigationView] is actually created in the same `build` function, the
   /// `context` argument to the `build` function can't be used to find the
   /// [NavigationView] (since it's "above" the widget being returned in the widget
   /// tree). In such cases, the following technique with a [Builder] can be used
   /// to provide a new scope with a [BuildContext] that is "under" the
   /// [NavigationView]:
-  ///
-  /// ** See code in examples/api/lib/material/scaffold/scaffold.of.1.dart **
-  /// {@end-tool}
   ///
   /// A more efficient solution is to split your build function into several
   /// widgets. This introduces a new context from which you can obtain the
@@ -617,9 +621,9 @@ class NavigationViewState extends State<NavigationView>
 
   @override
   void dispose() {
+    super.dispose();
     _paneAnimationController.dispose();
     paneController.removeListener(_onPaneControllerChange);
-    super.dispose();
   }
 
   void _animationChanged() {
@@ -790,16 +794,16 @@ class NavigationViewState extends State<NavigationView>
 
     return LayoutBuilder(
       builder: (context, consts) {
-        late DisplayMode displayMode;
+        DisplayMode displayMode = DisplayMode.minimal;
         var width = consts.biggest.width;
         if (width.isInfinite) width = sized.width;
 
-        if (width < widget.compactBreakpoint) {
+        if (width <= widget.compactBreakpoint.end!) {
           displayMode = DisplayMode.minimal;
-        } else if (width > widget.compactBreakpoint &&
-            width < widget.expandedBreakpoint) {
+        } else if (width > widget.mediumBreakpoint.begin! &&
+            width <= widget.mediumBreakpoint.end!) {
           displayMode = DisplayMode.medium;
-        } else if (width >= widget.expandedBreakpoint) {
+        } else if (width >= widget.expandedBreakpoint.begin!) {
           displayMode = DisplayMode.expanded;
         }
 
@@ -808,7 +812,7 @@ class NavigationViewState extends State<NavigationView>
           displayMode: displayMode,
           child: ScrollNotificationObserver(
             child: Material(
-              color: widget.backgroundColor ?? themeData.colorScheme.background,
+              color: widget.backgroundColor ?? themeData.colorScheme.surface,
               child: AnimatedBuilder(
                 animation: _paneAnimationController,
                 builder: (context, child) {

@@ -37,7 +37,7 @@ class PaneItemDestination extends StatelessWidget {
   /// selected.
   ///
   /// The icon will use [PaneThemeData.iconTheme] with
-  /// [MaterialState.selected]. If this is null, the default [IconThemeData]
+  /// [WidgetState.selected]. If this is null, the default [IconThemeData]
   /// would use a size of 24.0 and [ColorScheme.onSecondaryContainer].
   final Widget? selectedIcon;
 
@@ -55,12 +55,12 @@ class PaneItemDestination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Set<MaterialState> selectedState = <MaterialState>{
-      MaterialState.selected,
+    const Set<WidgetState> selectedState = <WidgetState>{
+      WidgetState.selected,
     };
-    const Set<MaterialState> unselectedState = <MaterialState>{};
-    const Set<MaterialState> disabledState = <MaterialState>{
-      MaterialState.disabled,
+    const Set<WidgetState> unselectedState = <WidgetState>{};
+    const Set<WidgetState> disabledState = <WidgetState>{
+      WidgetState.disabled,
     };
 
     final PaneThemeData? paneItemTheme = PaneTheme.of(context);

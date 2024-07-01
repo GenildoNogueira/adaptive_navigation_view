@@ -19,6 +19,7 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 20),
     this.actions,
     this.appBarHeight,
+    this.additionalLending,
     this.leadingWidth,
     this.backgroundColor,
     this.clipBehavior,
@@ -157,6 +158,12 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// The height of the app bar. [_kDefaultAppBarHeight] is used by default
   final double? appBarHeight;
+
+  /// Additional leading widget to display before the [title] widget.
+  ///
+  /// This widget is typically used for adding custom leading content, such as
+  /// additional icons or widgets that appear before the main title in the app bar.
+  final Widget? additionalLending;
 
   /// {@template flutter.material.appbar.leadingWidth}
   /// Defines the width of [AppBar.leading] widget.
@@ -305,17 +312,18 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
     }
 
     final Widget toolbar = NavigationToolbar(
-      leading: (!isDisplayModeOpen)
-          ? Padding(
-              padding: const EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-              ),
+      leading: Row(
+        children: [
+          if (widget.additionalLending != null) widget.additionalLending!,
+          if (!isDisplayModeOpen)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: PaneButton(
                 isClose: navigationViewScope.isPaneOpen,
               ),
-            )
-          : null,
+            ),
+        ],
+      ),
       middle: title,
       trailing: actions,
       centerMiddle: widget._getEffectiveCenterTitle(theme),
