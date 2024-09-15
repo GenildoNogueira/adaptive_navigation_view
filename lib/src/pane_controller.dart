@@ -231,6 +231,8 @@ class NavigationPane extends StatelessWidget {
       }
     }
 
+    final bool directionRTL = Directionality.of(context) == TextDirection.rtl;
+
     return Semantics(
       scopesRoute: true,
       namesRoute: true,
@@ -257,29 +259,13 @@ class NavigationPane extends StatelessWidget {
               ? (clipBehavior ?? Clip.hardEdge)
               : Clip.none,
           child: Column(
+            mainAxisAlignment:
+                directionRTL ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               Expanded(
                 child: ListView(
                   shrinkWrap: true,
-                  children: [
-                    if (isDisplayModeMinimal)
-                      Align(
-                        alignment: switch (Directionality.of(context)) {
-                          TextDirection.rtl => Alignment.centerRight,
-                          TextDirection.ltr => Alignment.centerLeft,
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20.0,
-                            vertical: 10,
-                          ),
-                          child: PaneButton(
-                            isClose: navigationViewScope.isPaneOpen,
-                          ),
-                        ),
-                      ),
-                    ...wrappedChildren,
-                  ],
+                  children: wrappedChildren,
                 ),
               ),
               ...wrappedFooters,
@@ -314,7 +300,7 @@ class _PaneControllerScope extends InheritedWidget {
   @override
   bool updateShouldNotify(_PaneControllerScope old) {
     return controller != old.controller ||
-        old.paneActionMoveAnimationProgress != paneActionMoveAnimationProgress;
+        paneActionMoveAnimationProgress != old.paneActionMoveAnimationProgress;
   }
 }
 
@@ -512,6 +498,7 @@ class PaneControllerState extends State<PaneController>
 
   @override
   void dispose() {
+    _controller.dispose();
     _historyEntry?.remove();
     _focusScopeNode.dispose();
     super.dispose();
@@ -541,16 +528,19 @@ class PaneControllerState extends State<PaneController>
   }
 
   void _animationStatusChanged(AnimationStatus status) {
+    if (!mounted) return;
     switch (status) {
       case AnimationStatus.forward:
         if (isDisplayModeMinimal) {
           _ensureHistoryEntry();
         }
+        break;
       case AnimationStatus.reverse:
         if (isDisplayModeMinimal) {
           _historyEntry?.remove();
           _historyEntry = null;
         }
+        break;
       case AnimationStatus.dismissed:
         break;
       case AnimationStatus.completed:
@@ -720,12 +710,14 @@ class PaneControllerState extends State<PaneController>
     double? dragAreaWidth = widget.edgeDragWidth;
     if (widget.edgeDragWidth == null) {
       final EdgeInsets padding = MediaQuery.paddingOf(context);
-      dragAreaWidth = switch (textDirection) {
-        TextDirection.ltr =>
-          _kEdgeDragWidth + (paneIsStart ? padding.left : padding.right),
-        TextDirection.rtl =>
-          _kEdgeDragWidth + (paneIsStart ? padding.right : padding.left),
-      };
+      dragAreaWidth = _kEdgeDragWidth +
+          (paneIsStart
+              ? (textDirection == TextDirection.ltr
+                  ? padding.left
+                  : padding.right)
+              : (textDirection == TextDirection.rtl
+                  ? padding.right
+                  : padding.left));
     }
 
     if (_controller.status == AnimationStatus.dismissed &&
@@ -814,8 +806,9 @@ class PaneControllerState extends State<PaneController>
                     dragStartBehavior: widget.dragStartBehavior,
                     child: MouseRegion(
                       cursor: _paneCursor,
-                      child: Container(
+                      child: const SizedBox(
                         width: 15,
+                        height: double.infinity,
                       ),
                     ),
                   ),
@@ -919,6 +912,7 @@ class _PaneDefaults extends PaneThemeData {
             : states.contains(WidgetState.selected)
                 ? _colors.onSecondaryContainer
                 : _colors.onSurfaceVariant,
+        overflow: TextOverflow.ellipsis,
       );
     });
   }

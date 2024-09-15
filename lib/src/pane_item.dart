@@ -77,41 +77,28 @@ class PaneItemDestination extends StatelessWidget {
       paneActionMoveAnimationProgress:
           paneControllerScope.paneActionMoveAnimationProgress,
       buildIcon: (BuildContext context) {
-        final Widget selectedIconWidget = IconTheme.merge(
-          data: paneItemTheme?.iconTheme
-                  ?.resolve(enabled ? selectedState : disabledState) ??
-              defaults.iconTheme!
-                  .resolve(enabled ? selectedState : disabledState)!,
-          child: selectedIcon ?? icon,
-        );
-        final Widget unselectedIconWidget = IconTheme.merge(
-          data: paneItemTheme?.iconTheme
-                  ?.resolve(enabled ? unselectedState : disabledState) ??
-              defaults.iconTheme!
-                  .resolve(enabled ? unselectedState : disabledState)!,
-          child: icon,
-        );
+        final state = enabled
+            ? (enabled ? selectedState : unselectedState)
+            : disabledState;
+        final themeData = paneItemTheme?.iconTheme?.resolve(state);
+        final IconThemeData resolvedTheme =
+            themeData ?? defaults.iconTheme!.resolve(state)!;
 
-        return _isForwardOrCompleted(animation)
-            ? selectedIconWidget
-            : unselectedIconWidget;
+        return IconTheme.merge(
+          data: resolvedTheme,
+          child: _isForwardOrCompleted(animation) ? selectedIcon ?? icon : icon,
+        );
       },
       buildLabel: (BuildContext context) {
-        final TextStyle? effectiveSelectedLabelTextStyle = paneItemTheme
-                ?.labelTextStyle
-                ?.resolve(enabled ? selectedState : disabledState) ??
-            defaults.labelTextStyle!
-                .resolve(enabled ? selectedState : disabledState);
-        final TextStyle? effectiveUnselectedLabelTextStyle = paneItemTheme
-                ?.labelTextStyle
-                ?.resolve(enabled ? unselectedState : disabledState) ??
-            defaults.labelTextStyle!
-                .resolve(enabled ? unselectedState : disabledState);
+        final state = enabled
+            ? (enabled ? selectedState : unselectedState)
+            : disabledState;
+        final resolvedTextStyle =
+            (paneItemTheme?.labelTextStyle?.resolve(state) ??
+                defaults.labelTextStyle!.resolve(state))!;
 
         return DefaultTextStyle(
-          style: _isForwardOrCompleted(animation)
-              ? effectiveSelectedLabelTextStyle!
-              : effectiveUnselectedLabelTextStyle!,
+          style: resolvedTextStyle,
           child: label,
         );
       },
@@ -186,55 +173,28 @@ class PaneIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+    return _StatusTransitionWidgetBuilder(
       animation: animation,
       builder: (BuildContext context, Widget? child) {
-        // The scale should be 0 when the animation is unselected, as soon as
-        // the animation starts, the scale jumps to 40%, and then animates to
-        // 100% along a curve.
-        final double scale = animation.isDismissed
-            ? 0.0
-            : Tween<double>(begin: .4, end: 1.0).transform(
-                CurveTween(curve: Curves.easeInOutCubicEmphasized)
-                    .transform(animation.value),
-              );
-
-        return Transform(
-          alignment: Alignment.center,
-          // Scale in the X direction only.
-          transform: Matrix4.diagonal3Values(
-            scale,
-            1.0,
-            1.0,
-          ),
-          child: child,
+        return _SelectableAnimatedBuilder(
+          isSelected: _isForwardOrCompleted(animation),
+          duration: const Duration(milliseconds: 100),
+          builder: (BuildContext context, Animation<double> fadeAnimation) {
+            return FadeTransition(
+              opacity: fadeAnimation,
+              child: Container(
+                width: width,
+                height: height,
+                decoration: ShapeDecoration(
+                  shape: shape ??
+                      RoundedRectangleBorder(borderRadius: borderRadius),
+                  color: color ?? Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            );
+          },
         );
       },
-      // Fade should be a 100ms animation whenever the parent animation changes
-      // direction.
-      child: _StatusTransitionWidgetBuilder(
-        animation: animation,
-        builder: (BuildContext context, Widget? child) {
-          return _SelectableAnimatedBuilder(
-            isSelected: _isForwardOrCompleted(animation),
-            duration: const Duration(milliseconds: 100),
-            builder: (BuildContext context, Animation<double> fadeAnimation) {
-              return FadeTransition(
-                opacity: fadeAnimation,
-                child: Container(
-                  width: width,
-                  height: height,
-                  decoration: ShapeDecoration(
-                    shape: shape ??
-                        RoundedRectangleBorder(borderRadius: borderRadius),
-                    color: color ?? Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }
@@ -313,11 +273,13 @@ class _PaneItemBuilder extends StatelessWidget {
             (navigationView.isPaneOpen &&
                 paneActionMoveAnimationProgress > 0.5)) ...[
           const SizedBox(width: 12),
-          Opacity(
-            opacity: isDisplayModeMinimal || isDisplayModeOpen
-                ? 1.0
-                : paneActionMoveAnimationProgress,
-            child: buildLabel(context),
+          Flexible(
+            child: Opacity(
+              opacity: isDisplayModeMinimal || isDisplayModeOpen
+                  ? 1.0
+                  : paneActionMoveAnimationProgress,
+              child: buildLabel(context),
+            ),
           ),
         ] else
           const SizedBox.shrink(),

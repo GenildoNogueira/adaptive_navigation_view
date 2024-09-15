@@ -313,6 +313,7 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
 
     final Widget toolbar = NavigationToolbar(
       leading: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.additionalLending != null) widget.additionalLending!,
           if (!isDisplayModeOpen)

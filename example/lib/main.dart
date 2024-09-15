@@ -99,17 +99,20 @@ class _MyAppState extends State<MyApp> {
         selectedIndex: _selectedIndex,
         footers: const [
           PaneItemDestination(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
             label: Text('Settings'),
           ),
         ],
         children: const [
           PaneItemDestination(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
             label: Text('Home'),
           ),
           PaneItemDestination(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
             label: Text('Profile'),
           ),
         ],

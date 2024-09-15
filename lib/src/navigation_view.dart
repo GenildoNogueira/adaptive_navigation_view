@@ -46,7 +46,11 @@ class WidthBreakpoint {
   final double? begin;
   final double? end;
 
-  const WidthBreakpoint({this.begin, this.end});
+  const WidthBreakpoint({this.begin, this.end})
+      : assert(
+          (begin == null || end == null) || (begin <= end),
+          'begin cannot be greater than end',
+        );
 }
 
 enum _NavigationViewSlot {
@@ -69,13 +73,10 @@ class _BodyBoxConstraints extends BoxConstraints {
   const _BodyBoxConstraints({
     super.maxWidth,
     super.maxHeight,
-    required this.bottomWidgetsHeight,
     required this.appBarHeight,
     required this.contentPaneWidth,
-  })  : assert(bottomWidgetsHeight >= 0),
-        assert(appBarHeight >= 0);
+  }) : assert(appBarHeight >= 0);
 
-  final double bottomWidgetsHeight;
   final double appBarHeight;
   final double contentPaneWidth;
 
@@ -89,7 +90,6 @@ class _BodyBoxConstraints extends BoxConstraints {
       return false;
     }
     return other is _BodyBoxConstraints &&
-        other.bottomWidgetsHeight == bottomWidgetsHeight &&
         other.appBarHeight == appBarHeight &&
         other.contentPaneWidth == contentPaneWidth;
   }
@@ -97,7 +97,6 @@ class _BodyBoxConstraints extends BoxConstraints {
   @override
   int get hashCode => Object.hash(
         super.hashCode,
-        bottomWidgetsHeight,
         appBarHeight,
         contentPaneWidth,
       );
@@ -147,6 +146,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
     required this.textDirection,
     required this.displayMode,
     required this.isOpenPane,
+    required this.paneWidth,
     required this.paneActionMoveAnimationProgress,
   });
 
@@ -155,6 +155,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
   final TextDirection textDirection;
   final DisplayMode displayMode;
   final bool isOpenPane;
+  final double paneWidth;
   final double paneActionMoveAnimationProgress;
 
   @override
@@ -179,7 +180,6 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
 
     double contentTop = 0.0;
     double offsetSafeAreaForPane = 0.0;
-    const double bottomWidgetsHeight = 0.0;
     double paneWidgetsWidth = 0.0;
     double appBarHeight = 0.0;
     const double compactPaneMaxWidth = kCompactNavigationPaneWidth;
@@ -200,59 +200,58 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       positionChild(_NavigationViewSlot.appBar, Offset.zero);
     }
 
-    final paneDirectionRTL = switch (textDirection) {
-      TextDirection.rtl => true,
-      TextDirection.ltr => false,
-    };
+    final paneDirectionRTL = textDirection == TextDirection.rtl;
 
     if (hasChild(_NavigationViewSlot.navigationPane)) {
-      if (!isOpenPane && isDisplayModeMedium) {
-        navigationMaxWidth = lerpDouble(
-              compactPaneMaxWidth,
-              openPaneMaxWidth,
-              paneActionMoveAnimationProgress,
-            ) ??
-            compactPaneMaxWidth;
-      }
-      if (isOpenPane && isDisplayModeMedium) {
-        navigationMaxWidth = lerpDouble(
-              compactPaneMaxWidth,
-              openPaneMaxWidth,
-              paneActionMoveAnimationProgress,
-            ) ??
-            openPaneMaxWidth;
-      }
-      if (isDisplayModeExpanded) {
-        navigationMaxWidth = openPaneMaxWidth;
-      }
-
       offsetSafeAreaForPane = paneDirectionRTL ? paddingLeft : paddingRight;
+      final bool isMediumOrExpanded =
+          isDisplayModeMedium || isDisplayModeExpanded;
 
-      final BoxConstraints compactPaneConstraints = BoxConstraints(
-        maxWidth: navigationMaxWidth,
+      // Determine the max width of the navigation pane
+      if (isDisplayModeExpanded) {
+        // Determine the max width of the navigation pane using animation
+        if (!isOpenPane || paneWidth != openPaneMaxWidth) {
+          //Start animation to expand panel if it is not open or is not
+          //yet at full width
+          navigationMaxWidth = paneWidth;
+        } else {
+          // Keep panel at full width without animation
+          navigationMaxWidth = openPaneMaxWidth;
+        }
+      } else if (isMediumOrExpanded) {
+        navigationMaxWidth = lerpDouble(
+              paneWidth,
+              openPaneMaxWidth,
+              paneActionMoveAnimationProgress,
+            ) ??
+            (isOpenPane ? openPaneMaxWidth : compactPaneMaxWidth);
+      } else {
+        navigationMaxWidth = paneWidth;
+      }
+
+      final BoxConstraints paneConstraints = BoxConstraints(
+        maxWidth: isMediumOrExpanded ? navigationMaxWidth : size.width,
         maxHeight: math.max(0.0, height - contentTop),
       );
       final double compactPaneWidth = layoutChild(
         _NavigationViewSlot.navigationPane,
-        isDisplayModeMedium || isDisplayModeExpanded
-            ? compactPaneConstraints
-            : BoxConstraints.tight(size),
+        paneConstraints,
       ).width;
 
       if (!isDisplayModeMinimal) {
         paneWidgetsWidth += compactPaneWidth;
       }
 
+      final double panePositionX = paneDirectionRTL
+          ? size.width - paneWidgetsWidth - offsetSafeAreaForPane
+          : offsetSafeAreaForPane;
+
       positionChild(
         _NavigationViewSlot.navigationPane,
-        isDisplayModeMinimal
-            ? Offset.zero
-            : Offset(
-                paneDirectionRTL
-                    ? size.width - paneWidgetsWidth - offsetSafeAreaForPane
-                    : offsetSafeAreaForPane,
-                contentTop,
-              ),
+        Offset(
+          isDisplayModeMinimal ? 0.0 : panePositionX,
+          contentTop,
+        ),
       );
     }
 
@@ -261,7 +260,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
     // bottom-anchored system UI.
     final double contentBottom = math.max(
       0.0,
-      height - math.max(minInsets.bottom, bottomWidgetsHeight),
+      height - math.max(minInsets.bottom, 0.0),
     );
 
     // Set the content pane to account for the greater of the width
@@ -277,7 +276,6 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       final BoxConstraints bodyConstraints = _BodyBoxConstraints(
         maxWidth: bodyMaxWidth,
         maxHeight: bodyMaxHeight,
-        bottomWidgetsHeight: bottomWidgetsHeight,
         appBarHeight: appBarHeight,
         contentPaneWidth: paneWidgetsWidth,
       );
@@ -304,6 +302,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         oldDelegate.minViewPadding != minViewPadding ||
         oldDelegate.textDirection != textDirection ||
         oldDelegate.displayMode != displayMode ||
+        oldDelegate.paneWidth != paneWidth ||
         oldDelegate.paneActionMoveAnimationProgress !=
             paneActionMoveAnimationProgress ||
         oldDelegate.isOpenPane != isOpenPane;
@@ -529,6 +528,9 @@ class NavigationViewState extends State<NavigationView>
   final NavigationPaneController paneController = NavigationPaneController();
 
   late final AnimationController _paneAnimationController;
+  late AnimationController _paneWidthController;
+  late Animation<double> _paneWidthAnimation;
+  double _paneWidth = kCompactNavigationPaneWidth;
 
   /// The max height the [NavigationView.appBar] uses.
   ///
@@ -596,12 +598,30 @@ class NavigationViewState extends State<NavigationView>
   @override
   void initState() {
     super.initState();
+    _paneWidthController = AnimationController(
+      vsync: this,
+      duration: _kBaseSettleDuration,
+    );
+
+    _paneWidthAnimation = Tween<double>(
+      begin: kCompactNavigationPaneWidth,
+      end: kOpenNavigationPaneWidth,
+    ).animate(
+      CurvedAnimation(
+        parent: _paneWidthController,
+        curve: Curves.easeInOut,
+      ),
+    )..addListener(() {
+        setState(() {
+          _paneWidth = _paneWidthAnimation.value;
+        });
+      });
+
     _paneAnimationController = AnimationController(
       value: paneController.isPaneOpen ? 1.0 : 0.0,
       duration: _kBaseSettleDuration,
       vsync: this,
-    )..addListener(_animationChanged);
-    paneController.addListener(_onPaneControllerChange);
+    )..addListener(_listener);
   }
 
   @override
@@ -623,17 +643,14 @@ class NavigationViewState extends State<NavigationView>
   void dispose() {
     super.dispose();
     _paneAnimationController.dispose();
-    paneController.removeListener(_onPaneControllerChange);
+    _paneWidthController.dispose();
+    paneController.removeListener(_listener);
   }
 
-  void _animationChanged() {
+  void _listener() {
     setState(() {
       // The animation controller's state is our build state, and it changed already.
     });
-  }
-
-  void _onPaneControllerChange() {
-    setState(() {});
   }
 
   void _addIfNonNull(
@@ -800,11 +817,21 @@ class NavigationViewState extends State<NavigationView>
 
         if (width <= widget.compactBreakpoint.end!) {
           displayMode = DisplayMode.minimal;
+          _paneWidthController.reverse();
         } else if (width > widget.mediumBreakpoint.begin! &&
             width <= widget.mediumBreakpoint.end!) {
           displayMode = DisplayMode.medium;
+          if (!isPaneOpen) {
+            _paneWidthController.reverse();
+          } else {
+            _paneWidthController.forward();
+          }
         } else if (width >= widget.expandedBreakpoint.begin!) {
           displayMode = DisplayMode.expanded;
+          _paneWidthController.forward();
+          if (!isPaneOpen && displayMode != DisplayMode.expanded) {
+            _paneWidthController.reverse();
+          }
         }
 
         return _NavigationViewScope(
@@ -827,6 +854,7 @@ class NavigationViewState extends State<NavigationView>
                         textDirection: textDirection,
                         displayMode: displayMode,
                         isOpenPane: isPaneOpen,
+                        paneWidth: _paneWidth,
                         paneActionMoveAnimationProgress:
                             _paneAnimationController.value,
                       ),

@@ -1,6 +1,6 @@
 name: adaptive_navigation_view
 description: "A Flutter package for creating adaptive navigation views that seamlessly adapt to different platforms and devices."
-version: 1.1.0
+version: 1.1.1
 repository: https://github.com/GenildoNogueira/adaptive_navigation_view
 issue_tracker: https://github.com/GenildoNogueira/adaptive_navigation_view/issues
 
