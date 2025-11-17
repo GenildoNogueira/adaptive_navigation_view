@@ -43,6 +43,91 @@ To get started with `adaptive_navigation_view`, follow these simple steps:
 
 ## Usage
 
+## Navigation by Index or Path
+
+You can now navigate between destinations using either the global index or a named path, passed directly in the `PaneItemDestination`. This allows flexible navigation, either by position or by named route.
+
+## Nested Destinations (Children)
+
+You can create hierarchical navigation by adding children to a `PaneItemDestination`. When a destination has children, it becomes expandable and its children are shown as sub-items.
+
+**Note:** If a `PaneItemDestination` has one or more children, it is not directly navigable (not selectable). Instead, it acts as a parent/expander and only its children are considered navigable destinations. Clicking on a parent with children will expand or collapse its sub-items, but will not trigger navigation or selection for the parent itself.
+
+### Example: Using children in PaneItemDestination
+
+```dart
+controller = NavigationViewController(
+  length: 6,
+  initialPath: '/',
+  destinationType: DestinationTypes.byPath,
+  onDestinationPath: _navigateToPath,
+  vsync: this,
+);
+
+NavigationPane(
+  controller: controller,
+  children: [
+    PaneItemDestination(
+      icon: Icon(Icons.folder),
+      label: Text('Documents'),
+      children: [
+        PaneItemDestination(
+          icon: Icon(Icons.insert_drive_file),
+          label: Text('Files'),
+          path: '/documents/files',
+        ),
+        PaneItemDestination(
+          icon: Icon(Icons.image),
+          label: Text('Images'),
+          path: '/documents/images',
+        ),
+      ],
+    ),
+    PaneItemDestination(
+      icon: Icon(Icons.settings),
+      label: Text('Settings'),
+      path: '/settings',
+    ),
+  ],
+)
+```
+
+This allows you to build expandable/collapsible navigation menus with sub-items, ideal for organizing complex navigation structures.
+
+### Example: Using a path
+
+```dart
+NavigationPane(
+  onDestinationSelected: (index) {
+    // Navigation by index
+    controller.selectDestination(index);
+  },
+  selectedIndex: controller.selectedIndex,
+  children: [
+    PaneItemDestination(
+      icon: Icon(Icons.home),
+      label: Text('Home'),
+      path: '/', // named path
+    ),
+    PaneItemDestination(
+      icon: Icon(Icons.person),
+      label: Text('Profile'),
+      path: '/profile',
+    ),
+  ],
+)
+```
+
+### Example: Navigation by path
+
+```dart
+controller.selectDestinationByPath('/profile');
+```
+
+If the destination has a `path`, selection can be done either by index or by path, making it easy to integrate with named routes (e.g., GoRouter, Navigator 2.0, FlutterModular).
+
+---
+
 Here's a quick example of how to integrate the `AdaptiveNavigationView` into your Flutter app:
 
 ```dart
@@ -98,6 +183,7 @@ class MyApp extends StatelessWidget {
 The `PaneThemeData` class defines default property values for descendant NavigationPane widgets. It includes various properties for customizing the appearance of PaneItemDestination elements.
 
 Example of creating a PaneItemThemeData:
+
 ```dart
 PaneThemeData myPaneTheme = const PaneThemeData(
   elevation: 0,
@@ -127,21 +213,25 @@ MaterialApp(
   ],
 )
 ```
+
 3. The NavigationView will automatically detect the current language of the device and adjust its layout to support RTL when necessary.
 
 # Preview Images
 
 ### Painel Minimal
+
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/1.png" width="456px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/2.png" width="456px" />
 
 ### Painel Medium
+
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/3.png" width="947px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/4.png" width="947px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/5.png" width="887px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/6.png" width="887px" />
 
 ### Painel Expanded
+
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/7.png" width="1342px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/8.png" width="1342px" />
 

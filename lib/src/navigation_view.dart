@@ -5,16 +5,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
-    show SystemMouseCursor, SystemUiOverlayStyle;
+    show SystemMouseCursor, SystemUiOverlayStyle, LogicalKeyboardKey;
 
-part 'pane_controller.dart';
-part 'navigation_pane_controller.dart';
+part 'navigation_pane.dart';
+part 'navigation_view_controller.dart';
 part 'navigation_app_bar.dart';
 part 'pane_item.dart';
 part 'navigation_pane_theme.dart';
 
-const double _kIndicatorHeight = 46;
-const double _kIndicatorWidth = 72;
+const double _kIndicatorHeight = 36;
+const double _kItemHeight = 36;
 
 /// The width of the Compact Navigation Pane
 const double kCompactNavigationPaneWidth = 80.0;
@@ -43,14 +43,34 @@ enum DisplayMode {
 }
 
 class WidthBreakpoint {
-  final double? begin;
+  final double? start;
   final double? end;
 
-  const WidthBreakpoint({this.begin, this.end})
+  const WidthBreakpoint({this.start, this.end})
       : assert(
-          (begin == null || end == null) || (begin <= end),
-          'begin cannot be greater than end',
+          (start != null || end != null),
+          'At least one of the parameters (start/end) must be provided.',
+        ),
+        assert(
+          (start == null || end == null) || (start <= end),
+          'Breakpoints must be sequential!',
         );
+
+  // Construtor para breakpoints do tipo "start até infinito"
+  const WidthBreakpoint.startFrom(double start) : this(start: start, end: null);
+
+  // Construtor para breakpoints do tipo "até end"
+  const WidthBreakpoint.endAt(double end) : this(start: null, end: end);
+
+  // Verifica se um valor está dentro do intervalo
+  bool contains(double value) {
+    final isAboveStart = (start == null) || (value >= start!);
+    final isBelowEnd = (end == null) || (value <= end!);
+    return isAboveStart && isBelowEnd;
+  }
+
+  @override
+  String toString() => 'WidthBreakpoint(start: $start, end: $end)';
 }
 
 enum _NavigationViewSlot {
@@ -171,20 +191,13 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         looseConstraints.tighten(width: size.width);
     final double height = size.height;
 
-    final isDisplayModeExpanded = displayMode == DisplayMode.expanded;
-    final isDisplayModeMedium = displayMode == DisplayMode.medium;
     final isDisplayModeMinimal = displayMode == DisplayMode.minimal;
 
     final paddingLeft = math.max(minViewPadding.left, 0.0);
     final paddingRight = math.max(minViewPadding.right, 0.0);
 
     double contentTop = 0.0;
-    double offsetSafeAreaForPane = 0.0;
-    double paneWidgetsWidth = 0.0;
     double appBarHeight = 0.0;
-    const double compactPaneMaxWidth = kCompactNavigationPaneWidth;
-    const double openPaneMaxWidth = kOpenNavigationPaneWidth;
-    double navigationMaxWidth = 0.0;
 
     if (hasChild(_NavigationViewSlot.appBar)) {
       final appBarWidth = fullWidthConstraints.maxWidth;
@@ -201,58 +214,38 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
     }
 
     final paneDirectionRTL = textDirection == TextDirection.rtl;
+    final offsetSafeAreaForPane = paneDirectionRTL ? paddingLeft : paddingRight;
 
     if (hasChild(_NavigationViewSlot.navigationPane)) {
-      offsetSafeAreaForPane = paneDirectionRTL ? paddingLeft : paddingRight;
-      final bool isMediumOrExpanded =
-          isDisplayModeMedium || isDisplayModeExpanded;
-
-      // Determine the max width of the navigation pane
-      if (isDisplayModeExpanded) {
-        // Determine the max width of the navigation pane using animation
-        if (!isOpenPane || paneWidth != openPaneMaxWidth) {
-          //Start animation to expand panel if it is not open or is not
-          //yet at full width
-          navigationMaxWidth = paneWidth;
-        } else {
-          // Keep panel at full width without animation
-          navigationMaxWidth = openPaneMaxWidth;
-        }
-      } else if (isMediumOrExpanded) {
-        navigationMaxWidth = lerpDouble(
-              paneWidth,
-              openPaneMaxWidth,
-              paneActionMoveAnimationProgress,
-            ) ??
-            (isOpenPane ? openPaneMaxWidth : compactPaneMaxWidth);
-      } else {
-        navigationMaxWidth = paneWidth;
-      }
-
       final BoxConstraints paneConstraints = BoxConstraints(
-        maxWidth: isMediumOrExpanded ? navigationMaxWidth : size.width,
+        maxWidth: isDisplayModeMinimal ? size.width : paneWidth,
         maxHeight: math.max(0.0, height - contentTop),
       );
-      final double compactPaneWidth = layoutChild(
-        _NavigationViewSlot.navigationPane,
-        paneConstraints,
-      ).width;
+      if (isDisplayModeMinimal) {
+        layoutChild(
+          _NavigationViewSlot.navigationPane,
+          paneConstraints,
+        );
 
-      if (!isDisplayModeMinimal) {
-        paneWidgetsWidth += compactPaneWidth;
+        positionChild(
+          _NavigationViewSlot.navigationPane,
+          Offset(0.0, contentTop),
+        );
+      } else {
+        final double panePositionX = paneDirectionRTL
+            ? size.width - paneWidth - offsetSafeAreaForPane
+            : offsetSafeAreaForPane;
+
+        layoutChild(
+          _NavigationViewSlot.navigationPane,
+          paneConstraints,
+        );
+
+        positionChild(
+          _NavigationViewSlot.navigationPane,
+          Offset(panePositionX, contentTop),
+        );
       }
-
-      final double panePositionX = paneDirectionRTL
-          ? size.width - paneWidgetsWidth - offsetSafeAreaForPane
-          : offsetSafeAreaForPane;
-
-      positionChild(
-        _NavigationViewSlot.navigationPane,
-        Offset(
-          isDisplayModeMinimal ? 0.0 : panePositionX,
-          contentTop,
-        ),
-      );
     }
 
     // Set the content bottom to account for the greater of the height of any
@@ -265,7 +258,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
 
     // Set the content pane to account for the greater of the width
     final double contentPane = math.max(
-      paneWidgetsWidth + offsetSafeAreaForPane,
+      isDisplayModeMinimal ? 0.0 : paneWidth + offsetSafeAreaForPane,
       0.0,
     );
 
@@ -277,7 +270,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         maxWidth: bodyMaxWidth,
         maxHeight: bodyMaxHeight,
         appBarHeight: appBarHeight,
-        contentPaneWidth: paneWidgetsWidth,
+        contentPaneWidth: paneWidth,
       );
 
       layoutChild(_NavigationViewSlot.body, bodyConstraints);
@@ -303,8 +296,6 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         oldDelegate.textDirection != textDirection ||
         oldDelegate.displayMode != displayMode ||
         oldDelegate.paneWidth != paneWidth ||
-        oldDelegate.paneActionMoveAnimationProgress !=
-            paneActionMoveAnimationProgress ||
         oldDelegate.isOpenPane != isOpenPane;
   }
 }
@@ -315,10 +306,16 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
 class NavigationView extends StatefulWidget {
   const NavigationView({
     super.key,
+    this.length = 0,
+    this.initialIndex,
+    this.initialPath,
+    this.animationDuration,
+    required this.controller,
     required this.appBar,
     required this.pane,
     this.body,
     this.onPaneChanged,
+    this.preferredDisplayMode,
     this.backgroundColor,
     this.resizeToAvoidBottomInset,
     this.paneDragStartBehavior = DragStartBehavior.start,
@@ -326,9 +323,28 @@ class NavigationView extends StatefulWidget {
     this.paneEdgeDragWidth,
     this.paneEnableOpenDragGesture = true,
     this.compactBreakpoint = const WidthBreakpoint(end: 600),
-    this.mediumBreakpoint = const WidthBreakpoint(begin: 600, end: 840),
-    this.expandedBreakpoint = const WidthBreakpoint(begin: 840),
-  });
+    this.mediumBreakpoint = const WidthBreakpoint(start: 600, end: 840),
+    this.expandedBreakpoint = const WidthBreakpoint(start: 840),
+    this.compactPaneWidth,
+    this.openPaneWidth,
+  }) : assert(length >= 0);
+
+  /// The total number of navigable destinations.
+  final int length;
+
+  /// The initial index of the selected destination.
+  final int? initialIndex;
+
+  /// The initial path of the selected destination.
+  final String? initialPath;
+
+  /// The duration of pane animations.
+  final Duration? animationDuration;
+
+  /// The navigation controller for this view.
+  ///
+  /// Provides access to navigation state and selection methods.
+  final NavigationViewController controller;
 
   /// An [NavigationAppBar] to display at the top of the NavigationView.
   final PreferredSizeWidget appBar;
@@ -350,9 +366,9 @@ class NavigationView extends StatefulWidget {
   /// it.
   final Widget pane;
 
-  /// The primary content of the NavigationView.
+  /// The primary content of the [NavigationView].
   ///
-  /// Displayed below the [appBar], above the bottom of the ambient
+  /// Displayed below the [NavigationAppBar], above the bottom of the ambient
   /// [MediaQuery]'s [MediaQueryData.viewInsets], and behind the
   /// [floatingActionButton] and [NavigationPane]. If [resizeToAvoidBottomInset] is
   /// false then the body is not resized when the onscreen keyboard appears,
@@ -373,9 +389,11 @@ class NavigationView extends StatefulWidget {
   /// Optional callback that is called when the [NavigationView.pane] is opened or closed.
   final PaneCallback? onPaneChanged;
 
-  /// The color to use for the scrim that obscures primary content while a drawer is open.
+  final DisplayMode? preferredDisplayMode;
+
+  /// The color to use for the scrim that obscures primary content while pane is open.
   ///
-  /// If this is null, then [PaneThemeData.scrimColor] is used. If that
+  /// If this is null, then [NavigationThemeData.scrimColor] is used. If that
   /// is also null, then it defaults to [Colors.black54].
   final Color? paneScrimColor;
 
@@ -419,7 +437,7 @@ class NavigationView extends StatefulWidget {
   /// Determines if the [NavigationView.pane] can be opened with a drag
   /// gesture on mobile.
   ///
-  /// On desktop platforms, the drawer is not draggable.
+  /// On desktop platforms, the pane is not draggable.
   ///
   /// By default, the drag gesture is enabled on mobile.
   final bool paneEnableOpenDragGesture;
@@ -435,6 +453,22 @@ class NavigationView extends StatefulWidget {
   /// The breakpoint value at which the navigation pane switches to expanded mode.
   /// When the width is between 840 (inclusive) and 1200 (exclusive), the navigation pane is in expanded mode.
   final WidthBreakpoint expandedBreakpoint;
+
+  /// The width of the navigation pane when in compact mode.
+  ///
+  /// This value determines how wide the pane will be when the layout is
+  /// considered compact, typically for narrow screens or when the pane is closed.
+  ///
+  /// Defaults to [kCompactNavigationPaneWidth].
+  final double? compactPaneWidth;
+
+  /// The width of the navigation pane when fully open.
+  ///
+  /// This value determines how wide the pane will be when it is expanded or
+  /// visible in full mode (e.g., on wider screens or when explicitly opened).
+  ///
+  /// Defaults to [kOpenNavigationPaneWidth].
+  final double? openPaneWidth;
 
   /// Finds the [NavigationViewState] from the closest instance of this class that
   /// encloses the given context.
@@ -525,12 +559,9 @@ class NavigationViewState extends State<NavigationView>
 
   final GlobalKey _paneKey = GlobalKey();
 
-  final NavigationPaneController paneController = NavigationPaneController();
-
-  late final AnimationController _paneAnimationController;
-  late AnimationController _paneWidthController;
   late Animation<double> _paneWidthAnimation;
-  double _paneWidth = kCompactNavigationPaneWidth;
+
+  NavigationViewController get controller => widget.controller;
 
   /// The max height the [NavigationView.appBar] uses.
   ///
@@ -543,7 +574,7 @@ class NavigationViewState extends State<NavigationView>
   ///
   ///  * [NavigationViewState.openPane], which opens the [NavigationView.pane] of a
   ///    [NavigationView].
-  bool get isPaneOpen => paneController.isPaneOpen;
+  bool get isPaneOpen => controller.isPaneOpen;
 
   /// Opens the [NavigationPane] (if any).
   ///
@@ -558,18 +589,14 @@ class NavigationViewState extends State<NavigationView>
   ///
   /// See [NavigationView.of] for information about how to obtain the [NavigationViewState].
   void openPane() {
-    paneController.openOrClose(true);
-    _paneAnimationController.fling();
+    controller.open();
   }
 
   /// Closes [NavigationView.pane] if it is currently opened.
   ///
   /// See [NavigationView.of] for information about how to obtain the [NavigationViewState].
   void closePane() {
-    if (isPaneOpen) {
-      paneController.openOrClose(false);
-      _paneAnimationController.fling(velocity: -1.0);
-    }
+    controller.close();
   }
 
   // iOS FEATURES - status bar tap, back gesture
@@ -589,6 +616,50 @@ class NavigationViewState extends State<NavigationView>
     }
   }
 
+  DisplayMode _getEffectiveDisplayMode(double width) {
+    if (widget.preferredDisplayMode != null) {
+      return widget.preferredDisplayMode!;
+    }
+    final double? compactEnd = widget.compactBreakpoint.end;
+    final double? mediumStart = widget.mediumBreakpoint.start;
+    final double? mediumEnd = widget.mediumBreakpoint.end;
+    final double? expandedStart = widget.expandedBreakpoint.start;
+
+    if (compactEnd != null && width <= compactEnd) {
+      return DisplayMode.minimal;
+    } else if (mediumStart != null &&
+        mediumEnd != null &&
+        width > mediumStart &&
+        width <= mediumEnd) {
+      return DisplayMode.medium;
+    } else if (expandedStart != null && width >= expandedStart) {
+      return DisplayMode.expanded;
+    } else {
+      return DisplayMode.minimal;
+    }
+  }
+
+  double _calculatePaneWidth(DisplayMode displayMode) {
+    final theme = NavigationTheme.of(context);
+    final double openWidth =
+        widget.openPaneWidth ?? theme?.openWidth ?? kOpenNavigationPaneWidth;
+    final double compactWidth = widget.compactPaneWidth ??
+        theme?.compactWidth ??
+        kCompactNavigationPaneWidth;
+    final double animationValue =
+        controller.animation?.value ?? (isPaneOpen ? 1.0 : 0.0);
+
+    return switch (displayMode) {
+      DisplayMode.minimal => animationValue * openWidth,
+      DisplayMode.medium => lerpDouble(
+          compactWidth,
+          openWidth,
+          animationValue,
+        )!,
+      DisplayMode.expanded => openWidth,
+    };
+  }
+
   // INTERNALS
 
   bool get _resizeToAvoidBottomInset {
@@ -598,59 +669,79 @@ class NavigationViewState extends State<NavigationView>
   @override
   void initState() {
     super.initState();
-    _paneWidthController = AnimationController(
-      vsync: this,
-      duration: _kBaseSettleDuration,
-    );
-
     _paneWidthAnimation = Tween<double>(
-      begin: kCompactNavigationPaneWidth,
-      end: kOpenNavigationPaneWidth,
+      begin: widget.compactPaneWidth ?? kCompactNavigationPaneWidth,
+      end: widget.openPaneWidth ?? kOpenNavigationPaneWidth,
     ).animate(
       CurvedAnimation(
-        parent: _paneWidthController,
-        curve: Curves.easeInOut,
+        parent: controller.animation!,
+        curve: Curves.easeInOutCubic,
       ),
-    )..addListener(() {
-        setState(() {
-          _paneWidth = _paneWidthAnimation.value;
-        });
-      });
-
-    _paneAnimationController = AnimationController(
-      value: paneController.isPaneOpen ? 1.0 : 0.0,
-      duration: _kBaseSettleDuration,
-      vsync: this,
-    )..addListener(_listener);
+    )..addListener(_rebuild);
   }
 
   @override
   void didUpdateWidget(NavigationView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    switch (_paneAnimationController.status) {
-      case AnimationStatus.completed:
-      case AnimationStatus.dismissed:
-        _paneAnimationController.value = paneController.isPaneOpen ? 1.0 : 0.0;
-        break;
-      case AnimationStatus.forward:
-      case AnimationStatus.reverse:
-        break;
+    widget.controller.addListener(_onPaneControllerChanged);
+    oldWidget.controller.removeListener(_onPaneControllerChanged);
+
+    if (widget.preferredDisplayMode != oldWidget.preferredDisplayMode ||
+        widget.compactBreakpoint != oldWidget.compactBreakpoint ||
+        widget.mediumBreakpoint != oldWidget.mediumBreakpoint ||
+        widget.expandedBreakpoint != oldWidget.expandedBreakpoint) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuild());
+    }
+
+    if (widget.compactPaneWidth != oldWidget.compactPaneWidth ||
+        widget.openPaneWidth != oldWidget.openPaneWidth) {
+      _paneWidthAnimation.removeListener(_rebuild);
+      _paneWidthAnimation = Tween<double>(
+        begin: widget.compactPaneWidth ?? kCompactNavigationPaneWidth,
+        end: widget.openPaneWidth ?? kOpenNavigationPaneWidth,
+      ).animate(
+        CurvedAnimation(
+          parent: controller.animation!,
+          curve: Curves.easeInOutCubic,
+        ),
+      )..addListener(_rebuild);
+    }
+
+    // Sync animation controller value if isPaneOpen state changed externally
+    // or if animation controller was reset/changed.
+    if (controller.animation != null) {
+      final targetValue = isPaneOpen ? 1.0 : 0.0;
+      if (controller.animation!.value != targetValue &&
+          !controller.animationController.isAnimating) {
+        controller.animationController.value = targetValue;
+      }
     }
   }
 
   @override
   void dispose() {
+    controller.removeListener(_onPaneControllerChanged);
+    controller.dispose();
+    _paneWidthAnimation.removeListener(_rebuild);
     super.dispose();
-    _paneAnimationController.dispose();
-    _paneWidthController.dispose();
-    paneController.removeListener(_listener);
   }
 
-  void _listener() {
-    setState(() {
-      // The animation controller's state is our build state, and it changed already.
-    });
+  void _onPaneControllerChanged() {
+    // This is called when paneController notifies listeners (e.g., open/close, animation value change)
+    if (widget.onPaneChanged != null) {
+      // Call the callback when the pane state changes
+      if (mounted) {
+        widget.onPaneChanged!(isPaneOpen);
+      }
+    }
+    _rebuild(); // Always rebuild if the controller indicates a change
+  }
+
+  void _rebuild() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _addIfNonNull(
@@ -699,8 +790,7 @@ class NavigationViewState extends State<NavigationView>
       PaneController(
         key: _paneKey,
         alignment: PaneAlignment.start,
-        paneController: paneController,
-        paneAnimationController: _paneAnimationController,
+        paneController: controller,
         dragStartBehavior: widget.paneDragStartBehavior,
         scrimColor: widget.paneScrimColor,
         edgeDragWidth: widget.paneEdgeDragWidth,
@@ -722,7 +812,6 @@ class NavigationViewState extends State<NavigationView>
     assert(debugCheckHasDirectionality(context));
     final ThemeData themeData = Theme.of(context);
     final TextDirection textDirection = Directionality.of(context);
-    final sized = MediaQuery.sizeOf(context);
 
     final List<LayoutId> children = <LayoutId>[];
     _addIfNonNull(
@@ -811,11 +900,10 @@ class NavigationViewState extends State<NavigationView>
 
     return LayoutBuilder(
       builder: (context, consts) {
-        DisplayMode displayMode = DisplayMode.minimal;
-        var width = consts.biggest.width;
-        if (width.isInfinite) width = sized.width;
+        final displayMode = _getEffectiveDisplayMode(consts.maxWidth);
+        final paneWidth = _calculatePaneWidth(displayMode);
 
-        if (width <= widget.compactBreakpoint.end!) {
+        /*if (width <= widget.compactBreakpoint.end!) {
           displayMode = DisplayMode.minimal;
           _paneWidthController.reverse();
         } else if (width > widget.mediumBreakpoint.begin! &&
@@ -832,33 +920,55 @@ class NavigationViewState extends State<NavigationView>
           if (!isPaneOpen && displayMode != DisplayMode.expanded) {
             _paneWidthController.reverse();
           }
-        }
+        }*/
 
         return _NavigationViewScope(
           isPaneOpen: isPaneOpen,
           displayMode: displayMode,
+          paneActionMoveAnimationProgress:
+              controller.animation?.value ?? (isPaneOpen ? 1.0 : 0.0),
           child: ScrollNotificationObserver(
             child: Material(
               color: widget.backgroundColor ?? themeData.colorScheme.surface,
               child: AnimatedBuilder(
-                animation: _paneAnimationController,
+                animation: controller.animation!,
                 builder: (context, child) {
                   return Actions(
                     actions: <Type, Action<Intent>>{
                       DismissIntent: _DismissPaneAction(context),
-                    },
-                    child: CustomMultiChildLayout(
-                      delegate: _NavigationLayout(
-                        minInsets: minInsets,
-                        minViewPadding: minViewPadding,
-                        textDirection: textDirection,
-                        displayMode: displayMode,
-                        isOpenPane: isPaneOpen,
-                        paneWidth: _paneWidth,
-                        paneActionMoveAnimationProgress:
-                            _paneAnimationController.value,
+                      TogglePaneIntent: CallbackAction<TogglePaneIntent>(
+                        onInvoke: (TogglePaneIntent intent) {
+                          controller.toggle();
+                          return null;
+                        },
                       ),
-                      children: children,
+                    },
+                    child: Shortcuts(
+                      shortcuts: <ShortcutActivator, Intent>{
+                        LogicalKeySet(
+                          Theme.of(context).platform == TargetPlatform.macOS
+                              ? LogicalKeyboardKey.meta
+                              : LogicalKeyboardKey.control,
+                          LogicalKeyboardKey.keyB,
+                        ): const TogglePaneIntent(),
+                      },
+                      child: Focus(
+                        autofocus: false,
+                        child: CustomMultiChildLayout(
+                          delegate: _NavigationLayout(
+                            minInsets: minInsets,
+                            minViewPadding: minViewPadding,
+                            textDirection: textDirection,
+                            displayMode: displayMode,
+                            isOpenPane: isPaneOpen,
+                            paneWidth: paneWidth,
+                            paneActionMoveAnimationProgress:
+                                controller.animation?.value ??
+                                    (isPaneOpen ? 1.0 : 0.0),
+                          ),
+                          children: children,
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -869,6 +979,28 @@ class NavigationViewState extends State<NavigationView>
       },
     );
   }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      EnumProperty<DisplayMode?>(
+        'preferredDisplayMode',
+        widget.preferredDisplayMode,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      EnumProperty<DisplayMode>(
+        'effectiveDisplayMode',
+        _getEffectiveDisplayMode(MediaQuery.sizeOf(context).width),
+      ),
+    );
+  }
+}
+
+class TogglePaneIntent extends Intent {
+  const TogglePaneIntent();
 }
 
 class _DismissPaneAction extends DismissAction {
@@ -891,6 +1023,7 @@ class _NavigationViewScope extends InheritedWidget {
   const _NavigationViewScope({
     required this.isPaneOpen,
     required this.displayMode,
+    required this.paneActionMoveAnimationProgress,
     required super.child,
   });
 
@@ -898,6 +1031,9 @@ class _NavigationViewScope extends InheritedWidget {
 
   /// The current pane display mode according to the current state.
   final DisplayMode displayMode;
+
+  /// The animation progress for pane move actions (0.0 to 1.0).
+  final double paneActionMoveAnimationProgress;
 
   static _NavigationViewScope? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<_NavigationViewScope>();
@@ -910,6 +1046,8 @@ class _NavigationViewScope extends InheritedWidget {
   @override
   bool updateShouldNotify(_NavigationViewScope oldWidget) {
     return oldWidget.isPaneOpen != isPaneOpen ||
-        oldWidget.displayMode != displayMode;
+        oldWidget.displayMode != displayMode ||
+        oldWidget.paneActionMoveAnimationProgress !=
+            paneActionMoveAnimationProgress;
   }
 }

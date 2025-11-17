@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
 import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   runApp(const MainApp());
@@ -12,125 +12,187 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      supportedLocales: [
+    return MaterialApp.router(
+      theme: ThemeData(brightness: Brightness.dark),
+      themeMode: ThemeMode.dark,
+      supportedLocales: const [
         Locale('en', 'US'),
         Locale('ar', 'DZ'),
       ],
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: MyApp(),
+      locale: Locale('en', 'US'),
+      //locale: Locale('ar', 'DZ'),
+      routerConfig: _router,
     );
   }
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.state, required this.child});
+  final GoRouterState state;
+  final Widget? child;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  int _selectedIndex = 0;
-  final List<int> _previousPageIndex = [0];
+class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
+  late NavigationViewController controller;
 
-  LocalHistoryEntry? _historyEntry;
-  final FocusScopeNode _focusScopeNode = FocusScopeNode();
-
-  void _ensureHistoryEntry() {
-    final ModalRoute<dynamic>? route = ModalRoute.of(context);
-    if (route != null) {
-      _historyEntry = LocalHistoryEntry(
-        onRemove: _handleHistoryEntryRemoved,
-        impliesAppBarDismissal: false,
-      );
-      route.addLocalHistoryEntry(_historyEntry!);
-      FocusScope.of(context).setFirstFocus(_focusScopeNode);
+  void _navigateToPath(String? path) {
+    if (path != null) {
+      context.go(path);
     }
   }
 
-  void _handleHistoryEntryRemoved() {
-    setState(() {
-      _previousPageIndex.removeLast();
-      _selectedIndex =
-          _previousPageIndex.isNotEmpty ? _previousPageIndex.last : 0;
-    });
-  }
-
   Widget _buildLeading() {
-    final ModalRoute<dynamic>? parentRoute = ModalRoute.of(context);
-    final canPop = parentRoute?.canPop ?? false;
-
     return Builder(
       builder: (context) => IconButton(
-        onPressed: canPop
+        onPressed: controller.previousPaths.isNotEmpty
             ? () {
-                Navigator.maybePop(context);
+                controller.selectDestinationByPath(controller.lastVisitedPath!);
               }
             : null,
         icon: Icon(Icons.adaptive.arrow_back),
-        tooltip: 'Voltar',
+        tooltip: 'Back',
       ),
     );
   }
 
   @override
+  void initState() {
+    controller = NavigationViewController(
+      length: 6,
+      initialPath: '/',
+      destinationType: DestinationTypes.byPath,
+      onDestinationPath: _navigateToPath,
+      vsync: this,
+    );
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    controller.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return NavigationView(
+      controller: controller,
       appBar: NavigationAppBar(
         centerTitle: false,
         titleSpacing: 10,
         additionalLending: Padding(
-          padding: const EdgeInsets.only(left: 8.0),
+          padding: const EdgeInsetsDirectional.only(start: 8.0),
           child: _buildLeading(),
         ),
         title: const Text('Navigation View Example'),
       ),
       pane: NavigationPane(
-        onDestinationSelected: (value) => setState(() {
-          _selectedIndex = value;
-          _previousPageIndex.add(value);
-          _ensureHistoryEntry();
-        }),
-        selectedIndex: _selectedIndex,
         footers: const [
           PaneItemDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: Text('Settings'),
+            path: '/settings',
           ),
         ],
-        children: const [
+        destinations: const [
           PaneItemDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: Text('Home'),
+            path: '/',
           ),
           PaneItemDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: Text('Profile'),
+            path: '/profile',
+          ),
+          PaneItemDestination(
+            icon: Icon(Icons.folder_outlined),
+            label: Text('Documents'),
+            children: [
+              PaneItemDestination(
+                icon: Icon(Icons.description_outlined),
+                selectedIcon: Icon(Icons.description),
+                label: Text('Files'),
+                path: '/files',
+              ),
+              PaneItemDestination(
+                icon: Icon(Icons.image_outlined),
+                selectedIcon: Icon(Icons.image),
+                label: Text('Images'),
+                path: '/images',
+              ),
+            ],
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          Center(
-            child: Text('Home'),
-          ),
-          Center(
-            child: Text('Profile'),
-          ),
-          Center(
-            child: Text('Settings'),
-          ),
-        ],
+      body: Card(
+        margin: EdgeInsets.zero,
+        elevation: 2,
+        child: widget.child!,
       ),
     );
   }
 }
+
+final GoRouter _router = GoRouter(
+  routes: <RouteBase>[
+    ShellRoute(
+      builder: (context, state, child) {
+        return MyApp(state: state, child: child);
+      },
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/',
+          builder: (context, state) {
+            return const Center(
+              child: Text('Home'),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) {
+            return const Center(
+              child: Text('Profile'),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/files',
+          builder: (context, state) {
+            return const Center(
+              child: Text('Files'),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/images',
+          builder: (context, state) {
+            return const Center(
+              child: Text('Images'),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) {
+            return const Center(
+              child: Text('Settings'),
+            );
+          },
+        ),
+      ],
+    ),
+  ],
+);

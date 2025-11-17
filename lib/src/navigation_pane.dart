@@ -20,6 +20,8 @@ const double _kMinFlingVelocity = 365.0;
 const Duration _kBaseSettleDuration = Duration(milliseconds: 300);
 
 typedef PaneCallback = void Function(bool isOpened);
+typedef DestinationSelectedIndex = void Function(int? index);
+typedef DestinationSelectedPath = void Function(String? path);
 
 class NavigationPane extends StatelessWidget {
   /// Creates a Material Design pane.
@@ -31,17 +33,13 @@ class NavigationPane extends StatelessWidget {
     super.key,
     this.indicatorColor,
     this.indicatorShape,
-    required this.children,
+    required this.destinations,
     this.footers,
-    required this.selectedIndex,
-    this.onDestinationSelected,
-    this.tilePadding,
+    this.itemPadding,
     this.backgroundColor,
     this.elevation,
     this.shadowColor,
     this.surfaceTintColor,
-    this.compactWidth,
-    this.openWidth,
     this.semanticLabel,
     this.shape,
     this.minimalShape,
@@ -51,13 +49,13 @@ class NavigationPane extends StatelessWidget {
   /// The background color of the [Material] that holds the [NavigationPane]'s
   /// contents.
   ///
-  /// If this is null, then [PaneThemeData.backgroundColor] is used.
+  /// If this is null, then [NavigationThemeData.backgroundColor] is used.
   /// If that is also null, then it falls back to [ColorScheme.surface].
   final Color? backgroundColor;
 
   /// The color used for the drop shadow to indicate elevation.
   ///
-  /// If null, [PaneThemeData.shadowColor] is used. If that
+  /// If null, [NavigationThemeData.shadowColor] is used. If that
   /// is also null, the default value is [Colors.transparent] which
   /// indicates that no drop shadow will be displayed.
   ///
@@ -67,81 +65,50 @@ class NavigationPane extends StatelessWidget {
   ///  The surface tint of the [Material] that holds the [NavigationPane]'s
   /// contents.
   ///
-  /// If this is null, then [PaneThemeData.surfaceTintColor] is used.
+  /// If this is null, then [NavigationThemeData.surfaceTintColor] is used.
   /// If that is also null, then it falls back to [Material.surfaceTintColor]'s default.
   final Color? surfaceTintColor;
 
   /// The elevation of the [NavigationPane] itself.
   ///
-  /// If null, [PaneThemeData.elevation] is used. If that
+  /// If null, [NavigationThemeData.elevation] is used. If that
   /// is also null, it will be 1.0.
   final double? elevation;
 
   /// The color of the [indicatorShape] when this destination is selected.
   ///
-  /// If this is null, [PaneThemeData.indicatorColor] is used.
+  /// If this is null, [NavigationThemeData.indicatorColor] is used.
   /// If that is also null, defaults to [ColorScheme.secondaryContainer].
   final Color? indicatorColor;
 
   /// The shape of the selected indicator.
   ///
-  /// If this is null, [PaneThemeData.indicatorShape] is used.
+  /// If this is null, [NavigationThemeData.indicatorShape] is used.
   /// If that is also null, defaults to [StadiumBorder].
   final ShapeBorder? indicatorShape;
 
-  /// Defines the appearance of the items within the navigation drawer.
+  /// Defines the appearance of the items within the navigation pane.
   ///
   /// The list contains [PaneItemDestination] widgets and/or customized
   /// widgets like headlines and dividers.
-  final List<Widget> children;
+  final List<Widget> destinations;
 
-  /// Additional widgets displayed at the bottom of the navigation drawer.
+  /// Additional widgets displayed at the bottom of the navigation pane.
   ///
   /// These widgets are typically used for footers or additional controls that
-  /// should appear at the bottom of the navigation drawer.
+  /// should appear at the bottom of the navigation pane.
   final List<Widget>? footers;
-
-  /// The index into destinations for the current selected
-  /// [PaneItemDestination] or null if no destination is selected.
-  ///
-  /// A valid [selectedIndex] satisfies 0 <= [selectedIndex] < number of [PaneItemDestination].
-  /// For an invalid [selectedIndex] like `-1`, all destinations will appear unselected.
-  final int selectedIndex;
-
-  /// Called when one of the [PaneItemDestination] children is selected.
-  ///
-  /// This callback usually updates the int passed to [selectedIndex].
-  ///
-  /// Upon updating [selectedIndex], the [NavigationPane] will be rebuilt.
-  final ValueChanged<int>? onDestinationSelected;
 
   /// Defines the padding for [PaneItemDestination] widgets (Pane items).
   ///
   /// Defaults to `EdgeInsets.symmetric(horizontal: 12.0)`.
-  final EdgeInsetsGeometry? tilePadding;
-
-  /// The width of the pane.
-  ///
-  /// If this is null, then [PaneThemeData.compactWidth] is used. If that is also
-  /// null, then it falls back to the Material spec's default (80.0).
-  final double? compactWidth;
-
-  /// The width of the pane.
-  ///
-  /// If this is null, then [PaneThemeData.openWidth] is used. If that is also
-  /// null, then it falls back to the Material spec's default (360.0).
-  final double? openWidth;
+  final EdgeInsetsGeometry? itemPadding;
 
   /// The semantic label of the Pane used by accessibility frameworks to
   /// announce screen transitions when the Pane is opened and closed.
   ///
   /// If this label is not provided, it will default to
   /// [MaterialLocalizations.paneLabel].
-  ///
-  /// See also:
-  ///
-  ///  * [SemanticsConfiguration.namesRoute], for a description of how this
-  ///    value is used.
   final String? semanticLabel;
 
   final ShapeBorder? shape;
@@ -156,10 +123,97 @@ class NavigationPane extends StatelessWidget {
   /// defaults to [Clip.none].
   final Clip? clipBehavior;
 
+  int _calculateTotalFlatSlotsRecursive(List<Widget> items) {
+    int count = 0;
+    for (final itemWidget in items) {
+      if (itemWidget is PaneItemDestination) {
+        final destination = itemWidget;
+        count++; // For the PaneItemDestination itself (parent or leaf)
+        if (destination.children != null && destination.children!.isNotEmpty) {
+          // Each child of this PaneItemDestination will also occupy a flat slot.
+          // These children are PaneItemDestination objects themselves.
+          count += destination.children!.length;
+        }
+      }
+      // Other widgets (like Dividers, Headers) don't contribute to selectable slots.
+    }
+    return count;
+  }
+
+  List<Widget> _buildHierarchyRecursive({
+    required BuildContext context,
+    required List<Widget> sourceItems,
+    required NavigationViewController controller,
+    required int currentGlobalSelectedIndex,
+    required int initialFlatIndex,
+    required int totalOverallSlots,
+    required ValueChanged<int> updateFlatIndex,
+  }) {
+    final List<Widget> resultWidgets = [];
+    int currentProcessingFlatIndex = initialFlatIndex;
+
+    for (var itemDataWidget in sourceItems) {
+      if (itemDataWidget is! PaneItemDestination) {
+        // Non-destination items (Dividers, etc.)
+        resultWidgets.add(itemDataWidget);
+        continue;
+      }
+
+      final PaneItemDestination destinationData = itemDataWidget;
+      final bool hasChildren = destinationData.children != null &&
+          destinationData.children!.isNotEmpty;
+
+      // This is the index the PaneItemDestination itself (parent or leaf) occupies in the flat list.
+      final int itemSelfFlatIndex = currentProcessingFlatIndex;
+
+      Widget itemWidget;
+
+      if (hasChildren) {
+        // Parent item: Not directly selectable, tap expands/collapses.
+        // It needs _PaneDestinationInfo for its PaneItemBuilder to get parentIndex.
+        itemWidget = _PaneDestinationInfo(
+          index:
+              itemSelfFlatIndex, // Parent's own slot index for child calculation
+          path: destinationData
+              .path, // Parent's own slot path for child calculation
+          child: itemDataWidget, // The PaneItemDestination widget itself
+        );
+        // Advance flat index: 1 for parent + number of children slots
+        currentProcessingFlatIndex +=
+            1 + (destinationData.children?.length ?? 0);
+      } else {
+        // Leaf item: This is a directly selectable destination.
+        final bool isSelected =
+            controller.destinationType == DestinationTypes.byIndex
+                ? itemSelfFlatIndex == currentGlobalSelectedIndex
+                : destinationData.path == controller.selectedPath;
+
+        itemWidget = _SelectableAnimatedBuilder(
+          key: ValueKey('item_$itemSelfFlatIndex'), // Use its unique flat index
+          animation: controller.getDestinationAnimation(itemSelfFlatIndex),
+          isSelected: isSelected,
+          child: _PaneDestinationInfo(
+            index: itemSelfFlatIndex, // Leaf's own selectable index
+            path: destinationData.path, // Leaf's own selectable path
+            child: itemDataWidget, // The PaneItemDestination widget itself
+          ),
+        );
+        // Advance flat index: 1 for this leaf item
+        currentProcessingFlatIndex += 1;
+      }
+      resultWidgets.add(itemWidget);
+    }
+    // Update the caller's tracking of the flat index
+    updateFlatIndex(currentProcessingFlatIndex);
+    return resultWidgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterialLocalizations(context));
-    final PaneThemeData? paneTheme = PaneTheme.of(context);
+    final NavigationThemeData? paneTheme = NavigationTheme.of(context);
+    final NavigationViewController navigationViewC =
+        NavigationView.of(context).controller;
     final _NavigationViewScope navigationViewScope =
         _NavigationViewScope.of(context);
     String? label = semanticLabel;
@@ -177,61 +231,45 @@ class NavigationPane extends StatelessWidget {
     final isDisplayModeMinimal =
         navigationViewScope.displayMode == DisplayMode.minimal;
 
-    final PaneThemeData defaults = _PaneDefaults(context);
+    final NavigationThemeData defaults = _NavigationDefaults(context);
     final ShapeBorder? effectiveShape =
-        shape ?? (paneTheme?.shape ?? defaults.shape);
+        shape ?? paneTheme?.shape ?? defaults.shape;
     final ShapeBorder? effectiveMinimalShape =
-        minimalShape ?? (paneTheme?.minimalShape ?? defaults.minimalShape);
-    final int totalNumberOfDestinations =
-        children.whereType<PaneItemDestination>().toList().length +
-            (footers?.whereType<PaneItemDestination>().toList().length ?? 0);
+        minimalShape ?? paneTheme?.minimalShape ?? defaults.minimalShape;
 
-    int destinationIndex = 0;
-    final List<Widget> wrappedChildren = <Widget>[];
-    Widget wrapChild(Widget child, int index) => _SelectableAnimatedBuilder(
-          duration: const Duration(milliseconds: 500),
-          isSelected: index == selectedIndex,
-          builder: (BuildContext context, Animation<double> animation) {
-            return _PaneInfo(
-              index: index,
-              totalNumberOfDestinations: totalNumberOfDestinations,
-              selectedAnimation: animation,
-              indicatorColor: indicatorColor,
-              indicatorShape: indicatorShape,
-              tilePadding:
-                  tilePadding ?? const EdgeInsets.symmetric(horizontal: 12.0),
-              onTap: () {
-                if (onDestinationSelected != null) {
-                  onDestinationSelected!(index);
-                }
-              },
-              child: child,
-            );
-          },
-        );
+    // Get the selected index from the NavigationViewController
+    final selectedIndex = navigationViewC.selectedIndex ?? 0;
 
-    for (int i = 0; i < children.length; i++) {
-      if (children[i] is! PaneItemDestination) {
-        wrappedChildren.add(children[i]);
-      } else {
-        wrappedChildren.add(wrapChild(children[i], destinationIndex));
-        destinationIndex += 1;
-      }
-    }
+    // Calculate total flat slots first
+    final int totalCalculatedSlots =
+        _calculateTotalFlatSlotsRecursive(destinations) +
+            _calculateTotalFlatSlotsRecursive(footers ?? []);
+    int currentFlatIdx = 0;
 
-    final List<Widget> wrappedFooters = <Widget>[];
+    final List<Widget> wrappedChildren = _buildHierarchyRecursive(
+      context: context,
+      sourceItems: destinations,
+      controller: navigationViewC,
+      currentGlobalSelectedIndex: selectedIndex,
+      initialFlatIndex: currentFlatIdx,
+      totalOverallSlots: totalCalculatedSlots,
+      updateFlatIndex: (newIndex) => currentFlatIdx = newIndex,
+    );
+
+    final List<Widget> wrappedFooters = [];
     if (footers != null && footers!.isNotEmpty) {
-      for (int i = 0; i < footers!.length; i++) {
-        if (footers![i] is! PaneItemDestination) {
-          wrappedFooters.add(footers![i]);
-        } else {
-          wrappedFooters.add(wrapChild(footers![i], destinationIndex));
-          destinationIndex += 1;
-        }
-      }
+      wrappedFooters.addAll(
+        _buildHierarchyRecursive(
+          context: context,
+          sourceItems: footers!,
+          controller: navigationViewC,
+          currentGlobalSelectedIndex: selectedIndex,
+          initialFlatIndex: currentFlatIdx,
+          totalOverallSlots: totalCalculatedSlots,
+          updateFlatIndex: (newIndex) => currentFlatIdx = newIndex,
+        ),
+      );
     }
-
-    final bool directionRTL = Directionality.of(context) == TextDirection.rtl;
 
     return Semantics(
       scopesRoute: true,
@@ -241,7 +279,7 @@ class NavigationPane extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints.expand(
           width: isDisplayModeMinimal
-              ? (openWidth ?? paneTheme?.openWidth ?? kOpenNavigationPaneWidth)
+              ? (paneTheme?.openWidth ?? kOpenNavigationPaneWidth)
               : null,
         ),
         child: Material(
@@ -259,8 +297,7 @@ class NavigationPane extends StatelessWidget {
               ? (clipBehavior ?? Clip.hardEdge)
               : Clip.none,
           child: Column(
-            mainAxisAlignment:
-                directionRTL ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: ListView(
@@ -268,7 +305,7 @@ class NavigationPane extends StatelessWidget {
                   children: wrappedChildren,
                 ),
               ),
-              ...wrappedFooters,
+              if (wrappedFooters.isNotEmpty) ...wrappedFooters,
               const SizedBox(height: 10),
             ],
           ),
@@ -281,26 +318,14 @@ class NavigationPane extends StatelessWidget {
 class _PaneControllerScope extends InheritedWidget {
   const _PaneControllerScope({
     required this.controller,
-    required this.paneActionMoveAnimationProgress,
     required super.child,
   });
 
   final PaneController controller;
 
-  final double paneActionMoveAnimationProgress;
-
-  static _PaneControllerScope? maybeOf(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_PaneControllerScope>();
-  }
-
-  static _PaneControllerScope of(BuildContext context) {
-    return maybeOf(context)!;
-  }
-
   @override
   bool updateShouldNotify(_PaneControllerScope old) {
-    return controller != old.controller ||
-        paneActionMoveAnimationProgress != old.paneActionMoveAnimationProgress;
+    return controller != old.controller;
   }
 }
 
@@ -330,9 +355,6 @@ class PaneController extends StatefulWidget {
     required this.alignment,
     required this.isOpenPane,
     required this.paneController,
-    required this.paneAnimationController,
-    this.compactWidth = kCompactNavigationPaneWidth,
-    this.openWidth = kOpenNavigationPaneWidth,
     this.dragStartBehavior = DragStartBehavior.start,
     this.scrimColor,
     this.edgeDragWidth,
@@ -350,9 +372,7 @@ class PaneController extends StatefulWidget {
   /// close the pane.
   final PaneAlignment alignment;
 
-  final NavigationPaneController paneController;
-
-  final AnimationController paneAnimationController;
+  final NavigationViewController paneController;
 
   /// Determines the way that drag start behavior is handled.
   ///
@@ -377,7 +397,7 @@ class PaneController extends StatefulWidget {
   /// The color to use for the scrim that obscures the underlying content while
   /// a sidebar is open.
   ///
-  /// If this is null, then [PaneThemeData.scrimColor] is used. If that
+  /// If this is null, then [NavigationThemeData.scrimColor] is used. If that
   /// is also null, then it defaults to [Colors.black54].
   final Color? scrimColor;
 
@@ -404,10 +424,6 @@ class PaneController extends StatefulWidget {
   /// depending on what was last saved to the target platform before the
   /// application was killed.
   final bool isOpenPane;
-
-  final double compactWidth;
-
-  final double openWidth;
 
   /// The closest instance of [PaneController] that encloses the given
   /// context, or null if none is found.
@@ -476,10 +492,10 @@ class PaneController extends StatefulWidget {
 /// Typically used by a [NavigationView] to [open] and [close] the Pane.
 class PaneControllerState extends State<PaneController>
     with SingleTickerProviderStateMixin {
-  AnimationController get _controller => widget.paneAnimationController;
+  late final AnimationController _animationController;
 
   /// Use this property to customize how the pane will be displayed.
-  /// [PaneDisplayMode.auto] is used by default.
+  /// [DisplayMode.auto] is used by default.
   DisplayMode get displayMode => mounted
       ? _NavigationViewScope.of(context).displayMode
       : DisplayMode.minimal;
@@ -488,17 +504,41 @@ class PaneControllerState extends State<PaneController>
   bool get isDisplayModeCompact => displayMode == DisplayMode.medium;
   bool get isDisplayModeExpanded => displayMode == DisplayMode.expanded;
 
-  SystemMouseCursor _paneCursor = SystemMouseCursors.resizeColumn;
+  bool _isDragging = false;
+  bool _isHoveringResizeArea = false;
+
+  SystemMouseCursor get _getCursor {
+    if (_isDragging) {
+      return SystemMouseCursors.resizeColumn;
+    }
+
+    if (_animationController.value < 0.1) {
+      return switch (Directionality.of(context)) {
+        TextDirection.rtl => SystemMouseCursors.resizeLeft,
+        TextDirection.ltr => SystemMouseCursors.resizeRight,
+      };
+    }
+
+    if (_animationController.value > 0.9) {
+      return switch (Directionality.of(context)) {
+        TextDirection.rtl => SystemMouseCursors.resizeRight,
+        TextDirection.ltr => SystemMouseCursors.resizeLeft,
+      };
+    }
+
+    return SystemMouseCursors.resizeColumn;
+  }
 
   @override
   void initState() {
     super.initState();
-    _controller.addStatusListener(_animationStatusChanged);
+    _animationController = widget.paneController.animationController;
+
+    _animationController.addStatusListener(_animationStatusChanged);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _historyEntry?.remove();
     _focusScopeNode.dispose();
     super.dispose();
@@ -554,17 +594,19 @@ class PaneControllerState extends State<PaneController>
   }
 
   void _handleDragDown(DragDownDetails details) {
-    _controller.stop();
+    _animationController.stop();
+    _isDragging = true;
     if (isDisplayModeMinimal) {
       _ensureHistoryEntry();
     }
   }
 
   void _handleDragCancel() {
-    if (_controller.isDismissed || _controller.isAnimating) {
+    _isDragging = false;
+    if (_animationController.isDismissed || _animationController.isAnimating) {
       return;
     }
-    if (_controller.value < 0.5) {
+    if (_animationController.value < 0.5) {
       close();
     } else {
       open();
@@ -579,10 +621,15 @@ class PaneControllerState extends State<PaneController>
     if (box != null) {
       return box.size.width;
     }
+
+    final NavigationThemeData? paneTheme = NavigationTheme.of(context);
+    final compactWidth = paneTheme?.compactWidth ?? kCompactNavigationPaneWidth;
+    final openWidth = paneTheme?.openWidth ?? kOpenNavigationPaneWidth;
+
     // pane not being shown currently
     return !widget.isOpenPane && isDisplayModeCompact
-        ? widget.compactWidth
-        : widget.openWidth;
+        ? compactWidth
+        : openWidth;
   }
 
   bool _previouslyOpened = false;
@@ -597,28 +644,22 @@ class PaneControllerState extends State<PaneController>
     }
     switch (Directionality.of(context)) {
       case TextDirection.rtl:
-        _controller.value -= delta;
+        _animationController.value -= delta;
       case TextDirection.ltr:
-        _controller.value += delta;
+        _animationController.value += delta;
     }
 
-    if (!widget.isOpenPane && _controller.value > 0.5) {
-      _paneCursor = SystemMouseCursors.resizeRight;
-    } else if (widget.isOpenPane && _controller.value < 0.5) {
-      _paneCursor = SystemMouseCursors.resizeLeft;
-    } else {
-      _paneCursor = SystemMouseCursors.resizeColumn;
-    }
-
-    final bool opened = _controller.value > 0.5;
+    final bool opened = _animationController.value > 0.5;
     if (opened != _previouslyOpened) {
-      widget.paneController.openOrClose(opened);
+      opened ? widget.paneController.open() : widget.paneController.close();
     }
     _previouslyOpened = opened;
   }
 
   void _settle(DragEndDetails details) {
-    if (_controller.isDismissed) {
+    _isDragging = false;
+
+    if (_animationController.isDismissed) {
       return;
     }
     double visualVelocity = details.velocity.pixelsPerSecond.dx / _width;
@@ -631,16 +672,24 @@ class PaneControllerState extends State<PaneController>
       }
       switch (Directionality.of(context)) {
         case TextDirection.rtl:
-          _controller.fling(velocity: -visualVelocity);
+          _animationController.fling(velocity: -visualVelocity);
           break;
         case TextDirection.ltr:
-          _controller.fling(velocity: visualVelocity);
+          _animationController.fling(velocity: visualVelocity);
           break;
       }
-    } else if (_controller.value < 0.5) {
+    } else if (_animationController.value < 0.5) {
       close();
     } else {
       open();
+    }
+  }
+
+  void _handleHoverChanged(bool isHovering) {
+    if (_isHoveringResizeArea != isHovering) {
+      setState(() {
+        _isHoveringResizeArea = isHovering;
+      });
     }
   }
 
@@ -648,22 +697,12 @@ class PaneControllerState extends State<PaneController>
   ///
   /// Typically called by [NavigationViewState.openPane].
   void open() {
-    _controller.fling();
-    widget.paneController.openOrClose(true);
-    _paneCursor = switch (Directionality.of(context)) {
-      TextDirection.rtl => SystemMouseCursors.resizeRight,
-      TextDirection.ltr => SystemMouseCursors.resizeLeft,
-    };
+    widget.paneController.open();
   }
 
   /// Starts an animation to close the pane.
   void close() {
-    _controller.fling(velocity: -1.0);
-    widget.paneController.openOrClose(false);
-    _paneCursor = switch (Directionality.of(context)) {
-      TextDirection.rtl => SystemMouseCursors.resizeLeft,
-      TextDirection.ltr => SystemMouseCursors.resizeRight,
-    };
+    widget.paneController.close();
   }
 
   late ColorTween _scrimColorTween;
@@ -673,7 +712,7 @@ class PaneControllerState extends State<PaneController>
     return ColorTween(
       begin: Colors.transparent,
       end: widget.scrimColor ??
-          PaneTheme.of(context)?.scrimColor ??
+          NavigationTheme.of(context)?.scrimColor ??
           Colors.black54,
     );
   }
@@ -720,7 +759,7 @@ class PaneControllerState extends State<PaneController>
                   : padding.left));
     }
 
-    if (_controller.status == AnimationStatus.dismissed &&
+    if (_animationController.status == AnimationStatus.dismissed &&
         isDisplayModeMinimal) {
       if (widget.enableOpenDragGesture && !isDesktop) {
         return Align(
@@ -757,7 +796,6 @@ class PaneControllerState extends State<PaneController>
 
       final Widget child = _PaneControllerScope(
         controller: widget,
-        paneActionMoveAnimationProgress: _controller.value,
         child: RepaintBoundary(
           child: Stack(
             children: <Widget>[
@@ -773,7 +811,9 @@ class PaneControllerState extends State<PaneController>
                             .modalBarrierDismissLabel,
                         child: Container(
                           // The pane's "scrim"
-                          color: _scrimColorTween.evaluate(_controller),
+                          color: _scrimColorTween.evaluate(
+                            _animationController,
+                          ),
                         ),
                       ),
                     ),
@@ -785,7 +825,7 @@ class PaneControllerState extends State<PaneController>
                   alignment: _paneInnerAlignment,
                   widthFactor: isDisplayModeCompact || isDisplayModeExpanded
                       ? null
-                      : _controller.value,
+                      : _animationController.value,
                   child: RepaintBoundary(
                     child: FocusScope(
                       key: _paneKey,
@@ -805,7 +845,9 @@ class PaneControllerState extends State<PaneController>
                     excludeFromSemantics: true,
                     dragStartBehavior: widget.dragStartBehavior,
                     child: MouseRegion(
-                      cursor: _paneCursor,
+                      onEnter: (_) => _handleHoverChanged(true),
+                      onExit: (_) => _handleHoverChanged(false),
+                      cursor: _getCursor,
                       child: const SizedBox(
                         width: 15,
                         height: double.infinity,
@@ -839,81 +881,5 @@ class PaneControllerState extends State<PaneController>
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterialLocalizations(context));
     return _buildPane(context);
-  }
-}
-
-class _PaneDefaults extends PaneThemeData {
-  _PaneDefaults(this.context)
-      : super(
-          elevation: 0.0,
-        );
-
-  final BuildContext context;
-  late final TextDirection direction = Directionality.of(context);
-  late final ColorScheme _colors = Theme.of(context).colorScheme;
-  late final TextTheme _textTheme = Theme.of(context).textTheme;
-
-  @override
-  Color? get backgroundColor => _colors.surface;
-
-  @override
-  Color? get surfaceTintColor => _colors.surfaceTint;
-
-  @override
-  Color get dividerColor => _colors.outlineVariant;
-
-  @override
-  Color? get shadowColor => Colors.transparent;
-
-  // There isn't currently a token for this value, but it is shown in the spec,
-  // so hard coding here for now.
-  @override
-  ShapeBorder? get shape => const RoundedRectangleBorder();
-
-  // There isn't currently a token for this value, but it is shown in the spec,
-  // so hard coding here for now.
-  @override
-  ShapeBorder? get minimalShape => RoundedRectangleBorder(
-        borderRadius: const BorderRadiusDirectional.horizontal(
-          end: Radius.circular(8.0),
-        ).resolve(direction),
-      );
-
-  @override
-  Color? get indicatorColor => _colors.secondaryContainer;
-
-  @override
-  ShapeBorder? get indicatorShape => const StadiumBorder();
-
-  @override
-  Size? get indicatorSize => const Size.fromHeight(36.0);
-
-  @override
-  WidgetStateProperty<IconThemeData?>? get iconTheme {
-    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-      return IconThemeData(
-        size: 24.0,
-        color: states.contains(WidgetState.disabled)
-            ? _colors.onSurfaceVariant.withOpacity(0.38)
-            : states.contains(WidgetState.selected)
-                ? _colors.onSecondaryContainer
-                : _colors.onSurfaceVariant,
-      );
-    });
-  }
-
-  @override
-  WidgetStateProperty<TextStyle?>? get labelTextStyle {
-    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-      final TextStyle style = _textTheme.labelLarge!;
-      return style.apply(
-        color: states.contains(WidgetState.disabled)
-            ? _colors.onSurfaceVariant.withOpacity(0.38)
-            : states.contains(WidgetState.selected)
-                ? _colors.onSecondaryContainer
-                : _colors.onSurfaceVariant,
-        overflow: TextOverflow.ellipsis,
-      );
-    });
   }
 }

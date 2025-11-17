@@ -206,8 +206,8 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final ThemeData theme = Theme.of(context);
     final IconButtonThemeData iconButtonTheme = IconButtonTheme.of(context);
-    final AppBarTheme appBarTheme = AppBarTheme.of(context);
-    final AppBarTheme defaults = _AppBarDefaults(context);
+    final appBarTheme = AppBarTheme.of(context);
+    final defaults = _AppBarDefaults(context);
     final _NavigationViewScope navigationViewScope =
         _NavigationViewScope.of(context);
 

@@ -9,8 +9,12 @@ void main() {
       NavigationView(
         appBar: NavigationAppBar(),
         pane: const NavigationPane(
-          selectedIndex: 0,
-          children: [],
+          destinations: [],
+        ),
+        controller: NavigationViewController(
+          length: 6,
+          initialPath: '/',
+          vsync: const TestVSync(),
         ),
       ),
     );
