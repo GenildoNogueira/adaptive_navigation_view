@@ -67,7 +67,7 @@ class NavigationViewController extends ChangeNotifier {
             : <int>[],
         _selectedPath =
             destinationType == DestinationTypes.byPath ? initialPath : null,
-        _previousPath = destinationType == DestinationTypes.byPath
+        _previousPaths = destinationType == DestinationTypes.byPath
             ? (initialPath != null ? [initialPath] : <String>[])
             : <String>[],
         _animationDuration = animationDuration ?? _kBaseSettleDuration,
@@ -106,7 +106,7 @@ class NavigationViewController extends ChangeNotifier {
         _previousIndex = previousIndex,
         _previousIndices = previousIndices,
         _selectedPath = selectedPath,
-        _previousPath = previousPath,
+        _previousPaths = previousPath,
         _animationController = animationController,
         _animationDuration = animationDuration,
         _destinationAnimations = destinationAnimations {
@@ -250,8 +250,7 @@ class NavigationViewController extends ChangeNotifier {
       }
 
       // Add current index to history before changing
-      if (_selectedIndex != null &&
-          !_previousIndices.contains(_selectedIndex!)) {
+      if (_selectedIndex != null) {
         _previousIndices.add(_selectedIndex!);
       }
 
@@ -275,9 +274,11 @@ class NavigationViewController extends ChangeNotifier {
       }
 
       // Add current path to history before changing
-      if (_selectedPath != null && !_previousPath.contains(_selectedPath!)) {
-        _previousPath.add(_selectedPath!);
+      if (_selectedPath != null) {
+        _previousPaths.add(_selectedPath!);
+        print("Previous Paths: $_previousPaths");
       }
+
       _selectedPath = value;
     }
 
@@ -365,7 +366,7 @@ class NavigationViewController extends ChangeNotifier {
   /// Contains the history of all paths the user has navigated to.
   List<String> get previousPaths {
     if (destinationType == DestinationTypes.byPath) {
-      return List.unmodifiable(_previousPath);
+      return List.unmodifiable(_previousPaths);
     }
     return const <String>[];
   }
@@ -375,13 +376,13 @@ class NavigationViewController extends ChangeNotifier {
   /// Returns null if there's no previous path in the history.
   String? get lastVisitedPath {
     if (destinationType == DestinationTypes.byPath &&
-        _previousPath.isNotEmpty) {
-      return _previousPath.last;
+        _previousPaths.isNotEmpty) {
+      return _previousPaths.last;
     }
     return null;
   }
 
-  final List<String> _previousPath;
+  final List<String> _previousPaths;
 
   /// Selects a navigation destination by index.
   ///
@@ -392,7 +393,7 @@ class NavigationViewController extends ChangeNotifier {
     if (destinationType != DestinationTypes.byIndex) {
       assert(
         false,
-        'selectDestinationByIndex can only be used when destinationTyped is DestinationTyped.byIndex',
+        'selectDestinationByIndex can only be used when destinationType is DestinationTypes.byIndex',
       );
       return;
     }
@@ -513,10 +514,11 @@ class NavigationViewController extends ChangeNotifier {
       _previousIndices.clear();
     } else if (destinationType == DestinationTypes.byPath) {
       _selectedPath = null;
-      _previousPath.clear();
+      _previousPaths.clear();
     }
 
     snapClosed();
+    notifyListeners();
   }
 
   /// Clears the navigation history without changing the current selection.
@@ -527,7 +529,7 @@ class NavigationViewController extends ChangeNotifier {
       _previousIndices.clear();
       notifyListeners();
     } else if (destinationType == DestinationTypes.byPath) {
-      _previousPath.clear();
+      _previousPaths.clear();
       notifyListeners();
     }
   }
@@ -556,8 +558,8 @@ class NavigationViewController extends ChangeNotifier {
       notifyListeners();
       return true;
     } else if (destinationType == DestinationTypes.byPath &&
-        _previousPath.isNotEmpty) {
-      final previousPath = _previousPath.removeLast();
+        _previousPaths.isNotEmpty) {
+      final previousPath = _previousPaths.removeLast();
       _selectedPath = previousPath;
       onDestinationPath?.call(previousPath);
       notifyListeners();
@@ -573,7 +575,7 @@ class NavigationViewController extends ChangeNotifier {
     return (destinationType == DestinationTypes.byIndex &&
             _previousIndices.isNotEmpty) ||
         (destinationType == DestinationTypes.byPath &&
-            _previousPath.isNotEmpty);
+            _previousPaths.isNotEmpty);
   }
 
   /// Gets the number of destinations in the navigation history.
@@ -583,7 +585,7 @@ class NavigationViewController extends ChangeNotifier {
     if (destinationType == DestinationTypes.byIndex) {
       return _previousIndices.length;
     } else if (destinationType == DestinationTypes.byPath) {
-      return _previousPath.length;
+      return _previousPaths.length;
     }
     return 0;
   }
@@ -609,7 +611,7 @@ class NavigationViewController extends ChangeNotifier {
   /// Returns true if the path was found and removed, false otherwise.
   bool removePathFromHistory(String path) {
     if (destinationType == DestinationTypes.byPath) {
-      final removed = _previousPath.remove(path);
+      final removed = _previousPaths.remove(path);
       if (removed) {
         notifyListeners();
       }
@@ -638,8 +640,8 @@ class NavigationViewController extends ChangeNotifier {
   String? getPathHistoryAt(int position) {
     if (destinationType == DestinationTypes.byPath &&
         position >= 0 &&
-        position < _previousPath.length) {
-      return _previousPath[position];
+        position < _previousPaths.length) {
+      return _previousPaths[position];
     }
     return null;
   }
@@ -657,7 +659,7 @@ class NavigationViewController extends ChangeNotifier {
   /// Only available when [destinationType] is [DestinationTypes.byPath].
   bool containsPathInHistory(String path) {
     return destinationType == DestinationTypes.byPath &&
-        _previousPath.contains(path);
+        _previousPaths.contains(path);
   }
 
   /// Gets the complete navigation history as a unified list.
@@ -666,11 +668,9 @@ class NavigationViewController extends ChangeNotifier {
   /// For [DestinationTypes.byPath]: Returns the actual paths
   List<String> get navigationHistory {
     if (destinationType == DestinationTypes.byIndex) {
-      return _previousIndices.map((index) => index.toString()).toList();
-    } else if (destinationType == DestinationTypes.byPath) {
-      return List.from(_previousPath);
+      return _previousIndices.map((i) => i.toString()).toList();
     }
-    return const <String>[];
+    return List.from(_previousPaths);
   }
 
   /// Gets the current selection as a string representation.

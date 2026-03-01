@@ -125,17 +125,13 @@ class NavigationPane extends StatelessWidget {
 
   int _calculateTotalFlatSlotsRecursive(List<Widget> items) {
     int count = 0;
-    for (final itemWidget in items) {
-      if (itemWidget is PaneItemDestination) {
-        final destination = itemWidget;
-        count++; // For the PaneItemDestination itself (parent or leaf)
-        if (destination.children != null && destination.children!.isNotEmpty) {
-          // Each child of this PaneItemDestination will also occupy a flat slot.
-          // These children are PaneItemDestination objects themselves.
-          count += destination.children!.length;
+    for (final item in items) {
+      if (item is PaneItemDestination) {
+        count++;
+        if (item.hasChildren) {
+          count += _calculateTotalFlatSlotsRecursive(item.children!);
         }
       }
-      // Other widgets (like Dividers, Headers) don't contribute to selectable slots.
     }
     return count;
   }
@@ -144,7 +140,7 @@ class NavigationPane extends StatelessWidget {
     required BuildContext context,
     required List<Widget> sourceItems,
     required NavigationViewController controller,
-    required int currentGlobalSelectedIndex,
+    required int? currentGlobalSelectedIndex,
     required int initialFlatIndex,
     required int totalOverallSlots,
     required ValueChanged<int> updateFlatIndex,
@@ -185,8 +181,10 @@ class NavigationPane extends StatelessWidget {
         // Leaf item: This is a directly selectable destination.
         final bool isSelected =
             controller.destinationType == DestinationTypes.byIndex
-                ? itemSelfFlatIndex == currentGlobalSelectedIndex
-                : destinationData.path == controller.selectedPath;
+                ? currentGlobalSelectedIndex != null &&
+                    itemSelfFlatIndex == currentGlobalSelectedIndex
+                : destinationData.path != null &&
+                    destinationData.path == controller.selectedPath;
 
         itemWidget = _SelectableAnimatedBuilder(
           key: ValueKey('item_$itemSelfFlatIndex'), // Use its unique flat index
@@ -238,7 +236,7 @@ class NavigationPane extends StatelessWidget {
         minimalShape ?? paneTheme?.minimalShape ?? defaults.minimalShape;
 
     // Get the selected index from the NavigationViewController
-    final selectedIndex = navigationViewC.selectedIndex ?? 0;
+    final selectedIndex = navigationViewC.selectedIndex;
 
     // Calculate total flat slots first
     final int totalCalculatedSlots =
@@ -297,16 +295,9 @@ class NavigationPane extends StatelessWidget {
               ? (clipBehavior ?? Clip.hardEdge)
               : Clip.none,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: wrappedChildren,
-                ),
-              ),
-              if (wrappedFooters.isNotEmpty) ...wrappedFooters,
-              const SizedBox(height: 10),
+              Expanded(child: ListView(children: wrappedChildren)),
+              ...wrappedFooters,
             ],
           ),
         ),
@@ -541,6 +532,7 @@ class PaneControllerState extends State<PaneController>
   void dispose() {
     _historyEntry?.remove();
     _focusScopeNode.dispose();
+    _animationController.removeStatusListener(_animationStatusChanged);
     super.dispose();
   }
 
@@ -650,9 +642,10 @@ class PaneControllerState extends State<PaneController>
     }
 
     final bool opened = _animationController.value > 0.5;
-    if (opened != _previouslyOpened) {
-      opened ? widget.paneController.open() : widget.paneController.close();
-    }
+    //if (opened != _previouslyOpened) {
+    //  _previouslyOpened = opened;
+    //opened ? widget.paneController.open() : widget.paneController.close();
+    //}
     _previouslyOpened = opened;
   }
 
@@ -730,6 +723,14 @@ class PaneControllerState extends State<PaneController>
       PaneAlignment.end => AlignmentDirectional.centerStart,
     };
   }
+
+  bool get _isDesktop => switch (Theme.of(context).platform) {
+        TargetPlatform.macOS ||
+        TargetPlatform.linux ||
+        TargetPlatform.windows =>
+          true,
+        _ => false,
+      };
 
   Widget _buildPane(BuildContext context) {
     final bool paneIsStart = widget.alignment == PaneAlignment.start;

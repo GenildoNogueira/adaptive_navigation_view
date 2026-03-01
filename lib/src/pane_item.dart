@@ -198,8 +198,8 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       } else {
         _selectionController.reverse();
       }
+      setState(() {});
     }
-    setState(() {});
   }
 
   void _checkPaneStateChange() {
@@ -254,23 +254,18 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   }
 
   bool _isDestinationSelected() {
-    if (_navigationController == null) {
+    if (_navigationController == null || widget.destination.hasChildren) {
       return false;
     }
 
-    if (widget.destination.hasChildren) {
-      return false;
-    }
-
-    // Check path-based selection first
     if (widget.destination.path != null) {
       return _navigationController!.selectedPath == widget.destination.path;
     }
 
     // For index-based selection, we need to get the destination info
     final destinationInfo = _PaneDestinationInfo.maybeOf(context);
-    if (destinationInfo != null) {
-      return _navigationController!.selectedIndex == destinationInfo.index;
+    if (destinationInfo?.index != null) {
+      return _navigationController!.selectedIndex == destinationInfo!.index;
     }
 
     return false;
@@ -341,9 +336,12 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   void dispose() {
     _navigationController?.removeListener(_updateSelectionState);
     focusNode.removeListener(_onFocusChange);
-    _expansionController.dispose();
-    _selectionController.dispose();
     focusNode.dispose();
+
+    if (_animationsInitialized) {
+      _expansionController.dispose();
+      _selectionController.dispose();
+    }
 
     super.dispose();
   }
@@ -384,7 +382,6 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       children: [
         Container(
           margin: itemMargin,
-          
           height: itemSize?.height,
           width: itemSize?.width,
           child: Stack(
@@ -447,8 +444,9 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   ) =>
       switch (displayMode) {
         DisplayMode.expanded => true,
-        DisplayMode.minimal => isPaneOpen && paneActionProgress > 0.5,
-        DisplayMode.medium => isPaneOpen && paneActionProgress > 0.5,
+        DisplayMode.minimal ||
+        DisplayMode.medium =>
+          isPaneOpen && paneActionProgress > 0.5,
       };
 
   static const Map<ShortcutActivator, Intent> _shortcuts =
@@ -466,97 +464,120 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     final theme = NavigationTheme.of(context);
     final defaults = _NavigationDefaults(context);
 
-    final isLabelVisible = _shouldShowLabel(
-      navigationScope.displayMode,
-      navigationScope.isPaneOpen,
-      navigationScope.paneActionMoveAnimationProgress,
-    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLabelVisible = _shouldShowLabel(
+          navigationScope.displayMode,
+          navigationScope.isPaneOpen,
+          navigationScope.paneActionMoveAnimationProgress,
+        );
 
-    final itemSpacing = theme?.itemSpacing ?? defaults.itemSpacing;
+        final itemSpacing = theme?.itemSpacing ?? defaults.itemSpacing ?? 8.0;
+        final chevronSize =
+            theme?.itemChevronSize ?? defaults.itemChevronSize ?? 20.0;
 
-    final content = Focus(
-      focusNode: focusNode,
-      child: Row(
-        spacing: itemSpacing ?? 0.0,
-        children: [
-          _buildIcon(
-            context,
-            _isSelected,
-            widget.destination.icon,
-            widget.destination.selectedIcon,
-            theme,
-            defaults,
-          ),
-          if (isLabelVisible)
-            Expanded(
-              child: _buildLabel(context, navigationScope, theme, defaults),
+        final requiredWidth = 24.0 + itemSpacing + chevronSize + 8.0;
+
+        final hasEnoughWidth = constraints.maxWidth >= requiredWidth;
+
+        Widget rowContent = Row(
+          spacing: itemSpacing,
+          children: [
+            _buildIcon(
+              context,
+              _isSelected,
+              widget.destination.icon,
+              widget.destination.selectedIcon,
+              theme,
+              defaults,
             ),
-          if (widget.destination.hasChildren &&
-              _shouldShowChevron(navigationScope)) ...[
-            _buildChevron(context, navigationScope),
+            if (isLabelVisible && hasEnoughWidth)
+              Expanded(
+                child: _buildLabel(context, navigationScope, theme, defaults),
+              ),
+            if (widget.destination.hasChildren &&
+                _shouldShowChevron(navigationScope) &&
+                hasEnoughWidth) ...[
+              _buildChevron(context, navigationScope),
+            ],
           ],
-        ],
-      ),
-    );
+        );
 
-    if (widget.destination.hasChildren) {
-      final bool isCompactClosed =
-          navigationScope.displayMode == DisplayMode.medium &&
-              !navigationScope.isPaneOpen;
+        if (!hasEnoughWidth) {
+          rowContent = ClipRect(
+            child: OverflowBox(
+              alignment: AlignmentDirectional.centerStart,
+              minWidth: 0.0,
+              maxWidth: double.infinity,
+              child: rowContent,
+            ),
+          );
+        }
 
-      if (isCompactClosed) {
-        final textDirection = Directionality.of(context);
+        final content = Focus(
+          focusNode: focusNode,
+          child: rowContent,
+        );
 
-        return RawMenuAnchor(
-          controller: _menuController,
-          childFocusNode: focusNode,
-          overlayBuilder: (BuildContext context, RawMenuOverlayInfo info) {
-            return Positioned(
-              top: info.anchorRect.bottom,
-              left: textDirection == TextDirection.rtl
-                  ? info.anchorRect.left - 168
-                  : info.anchorRect.right,
-              // The overlay will be treated as a dialog.
-              child: Semantics(
-                scopesRoute: true,
-                explicitChildNodes: true,
-                child: TapRegion(
-                  groupId: info.tapRegionGroupId,
-                  onTapOutside: (PointerDownEvent event) {
-                    MenuController.maybeOf(context)?.close();
-                    _clearFocus();
-                  },
-                  child: FocusScope(
-                    child: IntrinsicWidth(
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        constraints: const BoxConstraints(minWidth: 168),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: kElevationToShadow[4],
-                        ),
-                        child: Shortcuts(
-                          shortcuts: _shortcuts,
-                          child: Column(
-                            children:
-                                _buildMenuChildren(context, textDirection),
+        if (widget.destination.hasChildren) {
+          final bool isCompactClosed =
+              navigationScope.displayMode == DisplayMode.medium &&
+                  !navigationScope.isPaneOpen;
+
+          if (isCompactClosed) {
+            final textDirection = Directionality.of(context);
+
+            return RawMenuAnchor(
+              controller: _menuController,
+              childFocusNode: focusNode,
+              overlayBuilder: (BuildContext context, RawMenuOverlayInfo info) {
+                return Positioned(
+                  top: info.anchorRect.bottom,
+                  left: textDirection == TextDirection.rtl
+                      ? info.anchorRect.left - 168
+                      : info.anchorRect.right,
+                  child: Semantics(
+                    scopesRoute: true,
+                    explicitChildNodes: true,
+                    child: TapRegion(
+                      groupId: info.tapRegionGroupId,
+                      onTapOutside: (PointerDownEvent event) {
+                        MenuController.maybeOf(context)?.close();
+                        _clearFocus();
+                      },
+                      child: FocusScope(
+                        child: IntrinsicWidth(
+                          child: Container(
+                            clipBehavior: Clip.antiAlias,
+                            constraints: const BoxConstraints(minWidth: 168),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: kElevationToShadow[4],
+                            ),
+                            child: Shortcuts(
+                              shortcuts: _shortcuts,
+                              child: Column(
+                                children:
+                                    _buildMenuChildren(context, textDirection),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+              child: content,
             );
-          },
-          child: content,
-        );
-      }
-    }
+          }
+        }
 
-    return content;
+        return content;
+      },
+    );
   }
 
   List<Widget> _buildMenuChildren(
@@ -666,11 +687,9 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       return;
     }
 
-    final destinationInfo = _PaneDestinationInfo.maybeOf(context);
-    if (destinationInfo != null && destinationInfo.index != null) {
-      if (destinationInfo.index == null) {
-        _navigationController!.selectDestinationByIndex(destinationInfo.index!);
-      }
+    final index = _PaneDestinationInfo.maybeOf(context)?.index;
+    if (index != null) {
+      _navigationController!.selectDestinationByIndex(index);
     }
   }
 
@@ -707,18 +726,16 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
           (theme?.iconTheme?.resolve(states)?.size ??
               defaults.iconTheme!.resolve(states)!.size),
     );
+    final resolveIcon =
+        isSelected && selectedIcon != null ? selectedIcon : icon;
 
     return AnimatedBuilder(
       animation: _selectionAnimation,
-      builder: (context, child) {
-        final resolveIcon =
-            isSelected && selectedIcon != null ? selectedIcon : icon;
-
-        return IconTheme.merge(
-          data: iconTheme,
-          child: resolveIcon,
-        );
-      },
+      child: resolveIcon,
+      builder: (context, child) => IconTheme.merge(
+        data: iconTheme,
+        child: child!,
+      ),
     );
   }
 
@@ -901,15 +918,12 @@ class PaneIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: Opacity(
-        opacity: animation.value,
+      child: FadeTransition(
+        opacity: animation,
         child: Container(
           width: width,
           height: height,
-          decoration: ShapeDecoration(
-            color: color,
-            shape: shape,
-          ),
+          decoration: ShapeDecoration(color: color, shape: shape),
         ),
       ),
     );
@@ -991,7 +1005,8 @@ class _SelectableAnimatedBuilderState extends State<_SelectableAnimatedBuilder>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) => widget.child,
+      child: widget.child,
+      builder: (context, child) => child!,
     );
   }
 }

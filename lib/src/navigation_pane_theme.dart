@@ -226,6 +226,7 @@ class NavigationThemeData with Diagnosticable {
     Color? itemHoverBackgroundColor,
     Color? itemPressedBackgroundColor,
     WidgetStateProperty<ShapeBorder?>? itemShape,
+    EdgeInsetsGeometry? itemContentPadding,
     EdgeInsetsGeometry? itemMargin,
     double? itemSpacing,
     WidgetStateProperty<double?>? itemIconSize,
@@ -276,6 +277,7 @@ class NavigationThemeData with Diagnosticable {
       itemPressedBackgroundColor:
           itemPressedBackgroundColor ?? this.itemPressedBackgroundColor,
       itemShape: itemShape ?? this.itemShape,
+      itemContentPadding: itemContentPadding ?? this.itemContentPadding,
       itemMargin: itemMargin ?? this.itemMargin,
       itemSpacing: itemSpacing ?? this.itemSpacing,
       itemIconSize: itemIconSize ?? this.itemIconSize,
@@ -380,6 +382,11 @@ class NavigationThemeData with Diagnosticable {
         t,
         ShapeBorder.lerp,
       ),
+      itemContentPadding: EdgeInsetsGeometry.lerp(
+        a?.itemContentPadding,
+        b?.itemContentPadding,
+        t,
+      ),
       itemMargin: EdgeInsetsGeometry.lerp(
         a?.itemMargin,
         b?.itemMargin,
@@ -468,6 +475,7 @@ class NavigationThemeData with Diagnosticable {
         itemHoverBackgroundColor,
         itemPressedBackgroundColor,
         itemShape,
+        itemContentPadding,
         itemMargin,
         itemSpacing,
         itemIconSize,
@@ -522,6 +530,7 @@ class NavigationThemeData with Diagnosticable {
         other.itemHoverBackgroundColor == itemHoverBackgroundColor &&
         other.itemPressedBackgroundColor == itemPressedBackgroundColor &&
         other.itemShape == itemShape &&
+        other.itemContentPadding == itemContentPadding &&
         other.itemMargin == itemMargin &&
         other.itemSpacing == itemSpacing &&
         other.itemIconSize == itemIconSize &&
@@ -569,15 +578,6 @@ class NavigationThemeData with Diagnosticable {
       DiagnosticsProperty<ShapeBorder>(
         'minimalShape',
         minimalShape,
-        defaultValue: null,
-      ),
-    );
-    properties
-        .add(ColorProperty('shadowColor', shadowColor, defaultValue: null));
-    properties.add(
-      ColorProperty(
-        'surfaceTintColor',
-        surfaceTintColor,
         defaultValue: null,
       ),
     );
@@ -650,6 +650,13 @@ class NavigationThemeData with Diagnosticable {
       DiagnosticsProperty<WidgetStateProperty<ShapeBorder?>>(
         'itemShape',
         itemShape,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<EdgeInsetsGeometry?>(
+        'itemContentPadding',
+        itemContentPadding,
         defaultValue: null,
       ),
     );
@@ -832,7 +839,7 @@ class _NavigationDefaults extends NavigationThemeData {
   late final TextDirection direction = Directionality.of(context);
   late final ThemeData _theme = Theme.of(context);
   late final ColorScheme _colors = _theme.colorScheme;
-  late final TextTheme _textTheme = Theme.of(context).textTheme;
+  late final TextTheme _textTheme = _theme.textTheme;
 
   // There isn't currently a token for this value, but it is shown in the spec,
   // so hard coding here for now.
@@ -886,7 +893,7 @@ class _NavigationDefaults extends NavigationThemeData {
       });
 
   @override
-  Color? get itemHoverBackgroundColor => _colors.onSurface.withAlpha(2);
+  Color? get itemHoverBackgroundColor => _colors.onSurface.withAlpha(20);
 
   @override
   Color? get itemPressedBackgroundColor => _colors.onSurface.withAlpha(30);
