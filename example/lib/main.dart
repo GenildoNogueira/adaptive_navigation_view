@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
       builder: (context) => IconButton(
         onPressed: controller.previousPaths.isNotEmpty
             ? () {
-                controller.selectDestinationByPath(controller.lastVisitedPath!);
+                controller.goBack();
               }
             : null,
         icon: Icon(Icons.adaptive.arrow_back),
