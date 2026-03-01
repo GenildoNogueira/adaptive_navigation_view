@@ -235,29 +235,21 @@ class NavigationViewController extends ChangeNotifier {
 
   void _changeIndex(int? value) {
     if (destinationType == DestinationTypes.byIndex) {
-      if (value == null && _selectedIndex == null) {
-        return;
-      }
+      if (value == null && _selectedIndex == null) return;
+      if (value == _selectedIndex) return;
 
-      if (value == _selectedIndex) {
-        return;
-      }
-
-      // Animate previous selection out
       if (_selectedIndex != null &&
           _selectedIndex! < _destinationAnimations.length) {
         _destinationAnimations[_selectedIndex!].animateTo(0.0);
       }
 
-      // Add current index to history before changing
-      if (_selectedIndex != null) {
-        _previousIndices.add(_selectedIndex!);
-      }
-
       _previousIndex = _selectedIndex;
       _selectedIndex = value;
 
-      // Animate new selection in
+      if (value != null) {
+        _previousIndices.add(value);
+      }
+
       if (_selectedIndex != null &&
           _selectedIndex! < _destinationAnimations.length) {
         _destinationAnimations[_selectedIndex!].animateTo(1.0);
@@ -269,17 +261,13 @@ class NavigationViewController extends ChangeNotifier {
 
   void _changePath(String? value) {
     if (destinationType == DestinationTypes.byPath) {
-      if (value == _selectedPath) {
-        return;
-      }
-
-      // Add current path to history before changing
-      if (_selectedPath != null) {
-        _previousPaths.add(_selectedPath!);
-        print("Previous Paths: $_previousPaths");
-      }
+      if (value == _selectedPath) return;
 
       _selectedPath = value;
+
+      if (value != null) {
+        _previousPaths.add(value);
+      }
     }
 
     notifyListeners();
@@ -540,18 +528,20 @@ class NavigationViewController extends ChangeNotifier {
   /// Returns true if navigation was successful, false if there's no history to go back to.
   bool goBack() {
     if (destinationType == DestinationTypes.byIndex &&
-        _previousIndices.isNotEmpty) {
-      final previousIndex = _previousIndices.removeLast();
+        _previousIndices.length > 1) {
+      _previousIndices.removeLast();
+      final previousIndex = _previousIndices.last;
+
+      if (_selectedIndex != null &&
+          _selectedIndex! < _destinationAnimations.length) {
+        _destinationAnimations[_selectedIndex!].animateTo(0.0);
+      }
+
       _selectedIndex = previousIndex;
       _previousIndex = previousIndex;
 
-      // Update animations
-      for (int i = 0; i < _destinationAnimations.length; i++) {
-        if (i == previousIndex) {
-          _destinationAnimations[i].animateTo(1.0);
-        } else {
-          _destinationAnimations[i].animateTo(0.0);
-        }
+      if (_selectedIndex! < _destinationAnimations.length) {
+        _destinationAnimations[_selectedIndex!].animateTo(1.0);
       }
 
       onDestinationIndex?.call(previousIndex);
@@ -559,7 +549,8 @@ class NavigationViewController extends ChangeNotifier {
       return true;
     } else if (destinationType == DestinationTypes.byPath &&
         _previousPaths.isNotEmpty) {
-      final previousPath = _previousPaths.removeLast();
+      _previousPaths.removeLast();
+      final previousPath = _previousPaths.last;
       _selectedPath = previousPath;
       onDestinationPath?.call(previousPath);
       notifyListeners();

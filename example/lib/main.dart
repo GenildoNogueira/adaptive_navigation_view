@@ -52,7 +52,8 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
   Widget _buildLeading() {
     return Builder(
       builder: (context) => IconButton(
-        onPressed: controller.previousPaths.isNotEmpty
+        onPressed: controller.previousPaths.isNotEmpty &&
+                controller.previousPaths.length > 1
             ? () {
                 controller.goBack();
               }

@@ -750,7 +750,8 @@ class NavigationViewState extends State<NavigationView>
       widget.body == null
           ? null
           : _BodyBuilder(
-              body: KeyedSubtree(key: _bodyKey, child: widget.body!)),
+              body: KeyedSubtree(key: _bodyKey, child: widget.body!),
+            ),
       _NavigationViewSlot.body,
       removeLeftPadding: false,
       removeTopPadding: true,
