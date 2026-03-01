@@ -1,174 +1,163 @@
 # Adaptive Navigation View
 
-This package provides an adaptive navigation view for Flutter applications. The navigation view adapts to different platforms and devices, offering a consistent and customizable user experience.
-
-## Features
-
-- **Platform Adaptability:** Seamlessly adapts to different platforms like Android, iOS, macOS, Linux, and Windows.
-- **Responsive Design:** Offers a responsive design that works well on various screen sizes and orientations.
-- **Customizable:** Easily customize the appearance and behavior of the navigation view to suit your application's needs.
+A Flutter package that provides a fully adaptive navigation view, inspired by the [Fluent Design Navigation View](https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview) and built on [Material 3](https://m3.material.io/) principles. The layout automatically adapts between **Minimal**, **Medium**, and **Expanded** display modes based on screen width.
 
 <p align="center">
-  <a href="#preview-images">Preview Images</a>
+  <a href="#display-modes">Display Modes</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#navigation-controller">Navigation Controller</a> •
+  <a href="#theming">Theming</a> •
+  <a href="#keyboard-shortcuts">Keyboard Shortcuts</a> •
+  <a href="#rtl-support">RTL Support</a> •
+  <a href="#preview">Preview</a>
 </p>
-
-## Installation
-
-To get started with `adaptive_navigation_view`, follow these simple steps:
-
-1. Add the package to your `pubspec.yaml` file:
-
-    ```yaml
-    dependencies:
-      adaptive_navigation_view: ^version_number
-    ```
-
-    <p align="center">OR</p>
-
-    ```yaml
-    dependencies:
-    adaptive_navigation_view:
-        git: https://github.com/GenildoNogueira/adaptive_navigation_view.git
-    ```
-
-1. Run `flutter pub get` in your terminal.
-
-2. Import the package in your Dart code:
-
-    ```dart
-    import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
-    ```
-
-3. Start using the adaptive navigation view in your application!
-
-## Usage
-
-## Navigation by Index or Path
-
-You can now navigate between destinations using either the global index or a named path, passed directly in the `PaneItemDestination`. This allows flexible navigation, either by position or by named route.
-
-## Nested Destinations (Children)
-
-You can create hierarchical navigation by adding children to a `PaneItemDestination`. When a destination has children, it becomes expandable and its children are shown as sub-items.
-
-**Note:** If a `PaneItemDestination` has one or more children, it is not directly navigable (not selectable). Instead, it acts as a parent/expander and only its children are considered navigable destinations. Clicking on a parent with children will expand or collapse its sub-items, but will not trigger navigation or selection for the parent itself.
-
-### Example: Using children in PaneItemDestination
-
-```dart
-controller = NavigationViewController(
-  length: 6,
-  initialPath: '/',
-  destinationType: DestinationTypes.byPath,
-  onDestinationPath: _navigateToPath,
-  vsync: this,
-);
-
-NavigationPane(
-  controller: controller,
-  children: [
-    PaneItemDestination(
-      icon: Icon(Icons.folder),
-      label: Text('Documents'),
-      children: [
-        PaneItemDestination(
-          icon: Icon(Icons.insert_drive_file),
-          label: Text('Files'),
-          path: '/documents/files',
-        ),
-        PaneItemDestination(
-          icon: Icon(Icons.image),
-          label: Text('Images'),
-          path: '/documents/images',
-        ),
-      ],
-    ),
-    PaneItemDestination(
-      icon: Icon(Icons.settings),
-      label: Text('Settings'),
-      path: '/settings',
-    ),
-  ],
-)
-```
-
-This allows you to build expandable/collapsible navigation menus with sub-items, ideal for organizing complex navigation structures.
-
-### Example: Using a path
-
-```dart
-NavigationPane(
-  onDestinationSelected: (index) {
-    // Navigation by index
-    controller.selectDestination(index);
-  },
-  selectedIndex: controller.selectedIndex,
-  children: [
-    PaneItemDestination(
-      icon: Icon(Icons.home),
-      label: Text('Home'),
-      path: '/', // named path
-    ),
-    PaneItemDestination(
-      icon: Icon(Icons.person),
-      label: Text('Profile'),
-      path: '/profile',
-    ),
-  ],
-)
-```
-
-### Example: Navigation by path
-
-```dart
-controller.selectDestinationByPath('/profile');
-```
-
-If the destination has a `path`, selection can be done either by index or by path, making it easy to integrate with named routes (e.g., GoRouter, Navigator 2.0, FlutterModular).
 
 ---
 
-Here's a quick example of how to integrate the `AdaptiveNavigationView` into your Flutter app:
+## Features
+
+- **Three Adaptive Display Modes** — Minimal (mobile), Medium (tablet), and Expanded (desktop), with customizable breakpoints
+- **Smooth Transitions** — Animated pane transitions between display modes, no abrupt layout jumps
+- **Index or Path Navigation** — Select destinations by position index or named path (compatible with GoRouter, Navigator 2.0, FlutterModular)
+- **Navigation History** — Full navigation history stack with `goBack()` support and duplicate-aware tracking
+- **Hierarchical Destinations** — Expandable parent destinations with collapsible children
+- **Fully Themeable** — Fine-grained control over every visual aspect via `NavigationThemeData`
+- **RTL Support** — Full right-to-left language support
+- **Keyboard Shortcuts** — `Ctrl+B` / `Cmd+B` to toggle the pane, `Escape` to dismiss
+- **Drag Gesture** — Swipe to open/close the pane on mobile with fling support
+- **Resize Handle** — Drag the pane edge on desktop to resize
+
+---
+
+## Display Modes
+
+The navigation pane switches between three modes based on available screen width:
+
+| Mode | Default Width | Behavior |
+|---|---|---|
+| **Minimal** | `< 600px` | Only a menu button is shown. The pane slides in as an overlay. |
+| **Medium** | `600px – 840px` | Icons only when closed. Opens to show icons + labels. |
+| **Expanded** | `> 840px` | Pane is always visible and fully expanded. |
+
+You can customize the breakpoints per-instance:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
+NavigationView(
+  compactBreakpoint: const WidthBreakpoint(end: 600),
+  mediumBreakpoint: const WidthBreakpoint(start: 600, end: 840),
+  expandedBreakpoint: const WidthBreakpoint(start: 840),
+  // ...
+)
+```
 
-void main() {
-  runApp(MyApp());
+Or force a specific mode regardless of screen width:
+
+```dart
+NavigationView(
+  preferredDisplayMode: DisplayMode.expanded,
+  // ...
+)
+```
+
+---
+
+## Installation
+
+Add the package to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  adaptive_navigation_view: ^version_number
+```
+
+Or install directly from GitHub:
+
+```yaml
+dependencies:
+  adaptive_navigation_view:
+    git: https://github.com/GenildoNogueira/adaptive_navigation_view.git
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+Import in your Dart code:
+
+```dart
+import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
+```
+
+---
+
+## Usage
+
+### Basic Setup
+
+```dart
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
 }
 
-class MyApp extends StatelessWidget {
+class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
+  late final NavigationViewController _controller;
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = NavigationViewController(
+      length: 3,
+      initialIndex: 0,
+      destinationType: DestinationTypes.byIndex,
+      onDestinationIndex: (index) {
+        setState(() => _selectedIndex = index ?? 0);
+      },
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: NavigationView(
+        controller: _controller,
         appBar: NavigationAppBar(
-          title: const Text('Navigation View Example'),
+          title: const Text('My App'),
         ),
         pane: NavigationPane(
-          onDestinationSelected: (value) => setState(() {
-            _selectedIndex = value;
-          }),
-          selectedIndex: _selectedIndex,
-          children: const [
+          destinations: const [
             PaneItemDestination(
-              icon: Icon(Icons.home),
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
               label: Text('Home'),
             ),
             PaneItemDestination(
-              icon: Icon(Icons.person),
-              label: Text('Profile'),
+              icon: Icon(Icons.explore_outlined),
+              selectedIcon: Icon(Icons.explore),
+              label: Text('Explore'),
+            ),
+            PaneItemDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: Text('Settings'),
             ),
           ],
         ),
         body: [
-          const Center(
-            child: Text('Home'),
-          ),
-          const Center(
-            child: Text('Profile'),
-          ),
+          const Center(child: Text('Home')),
+          const Center(child: Text('Explore')),
+          const Center(child: Text('Settings')),
         ][_selectedIndex],
       ),
     );
@@ -176,65 +165,279 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-# Theming
+---
 
-### Pane Theme
+## Navigation Controller
 
-The `PaneThemeData` class defines default property values for descendant NavigationPane widgets. It includes various properties for customizing the appearance of PaneItemDestination elements.
+`NavigationViewController` is the central controller for managing navigation state, pane open/close animations, and navigation history.
 
-Example of creating a PaneItemThemeData:
+### Index-Based Navigation
+
+Best for simple, ordered navigation where destinations are identified by position.
 
 ```dart
-PaneThemeData myPaneTheme = const PaneThemeData(
-  elevation: 0,
-  openWidth: 250,
-  compactWidth: 60,
-  indicatorSize: Size.fromHeight(40.0),
+final controller = NavigationViewController(
+  length: 3,
+  initialIndex: 0,
+  destinationType: DestinationTypes.byIndex,
+  onDestinationIndex: (index) {
+    // Called whenever a destination is selected
+  },
+  vsync: this,
 );
+
+// Navigate programmatically
+controller.selectDestinationByIndex(2);
+
+// Read current state
+print(controller.selectedIndex);   // 2
+print(controller.previousIndices); // [0, 2]
 ```
 
-## Right-to-Left Language Support (RTL)
+### Path-Based Navigation
 
-The `NavigationView` provides support for right-to-left (RTL) languages, ensuring a consistent and intuitive user experience for users who use RTL languages.
-
-### Enabling RTL Support
-
-To enable RTL language support in the NavigationView, follow these steps:
-
-1. Ensure that your application's texts and resources are prepared for RTL languages, with appropriate layouts.
-
-2. In your Flutter application, configure the supported locales to include RTL languages. For example:
+Best when integrating with named route systems like GoRouter, Navigator 2.0, or FlutterModular.
 
 ```dart
-MaterialApp(
-  supportedLocales: [
-    const Locale('en', 'US'), // English (left to right)
-    const Locale('ar', 'AR'), // Arabic (right to left)
+final controller = NavigationViewController(
+  initialPath: '/home',
+  destinationType: DestinationTypes.byPath,
+  onDestinationPath: (path) {
+    // Trigger your router navigation here
+    context.go(path!);
+  },
+  vsync: this,
+);
+
+// Navigate programmatically
+controller.selectDestinationByPath('/settings');
+
+// Read current state
+print(controller.selectedPath);  // '/settings'
+print(controller.previousPaths); // ['/home', '/settings']
+```
+
+### Navigation History
+
+The controller maintains a full history stack. Navigation by index and by path both support duplicate entries, correctly reflecting how the user actually traversed the app.
+
+```dart
+// Navigate A → B → A → B
+controller.selectDestinationByIndex(1); // history: [0, 1]
+controller.selectDestinationByIndex(0); // history: [0, 1, 0]
+controller.selectDestinationByIndex(1); // history: [0, 1, 0, 1]
+
+// Go back step by step
+controller.goBack(); // history: [0, 1, 0], current: 0
+controller.goBack(); // history: [0, 1],    current: 1
+
+// Check if back is available
+if (controller.canGoBack) {
+  controller.goBack();
+}
+
+// Clear history without changing selection
+controller.clearHistory();
+```
+
+### Pane Control
+
+```dart
+controller.open();       // animate open
+controller.close();      // animate close
+controller.toggle();     // toggle between open/closed
+controller.snapOpen();   // instantly open, no animation
+controller.snapClosed(); // instantly close, no animation
+
+// Fling (e.g., after a drag gesture)
+controller.fling(velocity: 1.0);  // positive = open
+controller.fling(velocity: -1.0); // negative = close
+
+// Read state
+print(controller.isPaneOpen);  // bool
+print(controller.isAnimating); // bool
+print(controller.offset);      // 0.0 to 1.0
+```
+
+### Accessing the Controller from a Child Widget
+
+```dart
+// From anywhere in the subtree
+final state = NavigationView.of(context);
+state.openPane();
+state.closePane();
+
+// Or nullable version
+NavigationView.maybeOf(context)?.openPane();
+```
+
+---
+
+## Hierarchical Destinations (Children)
+
+Parent destinations with children are **not directly selectable** — tapping them expands or collapses their sub-items. Only leaf items (those without children) are navigable.
+
+In **Medium** mode with the pane closed, parent items show their children in a floating popup menu instead.
+
+```dart
+NavigationViewController(
+  length: 4, // count only leaf (selectable) destinations
+  initialPath: '/',
+  destinationType: DestinationTypes.byPath,
+  vsync: this,
+)
+
+NavigationPane(
+  destinations: [
+    PaneItemDestination(
+      icon: const Icon(Icons.folder_outlined),
+      selectedIcon: const Icon(Icons.folder),
+      label: const Text('Documents'),
+      initialExpanded: true, // expanded on first render
+      children: [
+        PaneItemDestination(
+          icon: const Icon(Icons.insert_drive_file_outlined),
+          label: const Text('Files'),
+          path: '/documents/files',
+        ),
+        PaneItemDestination(
+          icon: const Icon(Icons.image_outlined),
+          label: const Text('Images'),
+          path: '/documents/images',
+        ),
+      ],
+    ),
+    PaneItemDestination(
+      icon: const Icon(Icons.settings_outlined),
+      selectedIcon: const Icon(Icons.settings),
+      label: const Text('Settings'),
+      path: '/settings',
+    ),
   ],
 )
 ```
 
-3. The NavigationView will automatically detect the current language of the device and adjust its layout to support RTL when necessary.
+### Footer Items
 
-# Preview Images
+Items placed in `footers` are pinned to the bottom of the pane and do not scroll with the main destinations:
 
-### Painel Minimal
+```dart
+NavigationPane(
+  destinations: [ /* main items */ ],
+  footers: [
+    PaneItemDestination(
+      icon: const Icon(Icons.help_outline),
+      label: const Text('Help'),
+      path: '/help',
+    ),
+  ],
+)
+```
+
+---
+
+## Theming
+
+Apply a theme to the entire navigation via `NavigationTheme`:
+
+```dart
+NavigationTheme(
+  data: NavigationThemeData(
+    openWidth: 280,
+    compactWidth: 72,
+    indicatorColor: Colors.blue.shade100,
+    indicatorShape: const StadiumBorder(),
+    indicatorSize: const Size.fromHeight(40),
+    itemAnimationDuration: const Duration(milliseconds: 250),
+    itemAnimationCurve: Curves.easeInOutCubic,
+    itemMargin: const EdgeInsets.symmetric(horizontal: 12),
+    itemContentPadding: const EdgeInsets.symmetric(horizontal: 8),
+    itemShape: WidgetStateProperty.all(const StadiumBorder()),
+    itemSelectedBackgroundColor: Colors.blue.shade50,
+    itemHoverBackgroundColor: Colors.black.withValues(alpha: 0.04),
+    itemChevronColor: Colors.grey,
+    itemChildrenIndent: 20,
+  ),
+  child: NavigationView(/* ... */),
+)
+```
+
+All `NavigationThemeData` properties support `lerp` for smooth theme transitions. You can also use `copyWith` to override only specific values:
+
+```dart
+final myTheme = NavigationThemeData(
+  openWidth: 300,
+).copyWith(
+  indicatorColor: Colors.purple,
+  itemAnimationDuration: const Duration(milliseconds: 300),
+);
+```
+
+### Available Theme Properties
+
+| Category | Properties |
+|---|---|
+| **Pane** | `backgroundColor`, `elevation`, `shadowColor`, `surfaceTintColor`, `shape`, `minimalShape`, `scrimColor` |
+| **Sizes** | `openWidth`, `compactWidth`, `itemSize`, `indicatorSize`, `itemChevronSize`, `itemChildrenIndent`, `itemChildrenSpacing` |
+| **Indicator** | `indicatorColor`, `indicatorShape` |
+| **Item Background** | `itemBackgroundColor`, `itemSelectedBackgroundColor`, `itemHoverBackgroundColor`, `itemPressedBackgroundColor` |
+| **Item Shape** | `itemShape`, `itemMargin`, `itemContentPadding`, `itemSpacing`, `itemElevation`, `itemShadowColor` |
+| **Icons** | `iconTheme`, `itemIconColor`, `itemSelectedIconColor`, `itemHoverIconColor`, `itemDisabledIconColor`, `itemIconSize` |
+| **Labels** | `labelTextStyle`, `itemLabelStyle`, `itemSelectedLabelStyle`, `itemHoverLabelStyle`, `itemDisabledLabelStyle` |
+| **Chevron** | `itemChevronColor`, `itemChevronHoverColor`, `itemSelectedChevronColor` |
+| **Animation** | `itemAnimationDuration`, `itemAnimationCurve` |
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+B` / `Cmd+B` (macOS) | Toggle pane open/closed |
+| `Escape` | Close/dismiss the pane |
+| `↑` / `↓` | Navigate between items when focused |
+
+---
+
+## RTL Support
+
+The navigation pane automatically mirrors its layout for right-to-left languages. No extra configuration is needed beyond setting up your app's locale:
+
+```dart
+MaterialApp(
+  supportedLocales: const [
+    Locale('en', 'US'), // LTR
+    Locale('ar', 'AR'), // RTL — pane appears on the right
+    Locale('he', 'IL'), // RTL
+  ],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  home: NavigationView(/* ... */),
+)
+```
+
+---
+
+## Preview
+
+### Minimal (Mobile)
 
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/1.png" width="456px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/2.png" width="456px" />
 
-### Painel Medium
+### Medium (Tablet)
 
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/3.png" width="947px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/4.png" width="947px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/5.png" width="887px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/6.png" width="887px" />
 
-### Painel Expanded
+### Expanded (Desktop)
 
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/7.png" width="1342px" />
 <img src="https://raw.githubusercontent.com/GenildoNogueira/adaptive_navigation_view/master/screenshot/8.png" width="1342px" />
 
-# Acknowledgements
+---
 
-This package is based on the principles and guidelines outlined in the [Material 3 Documentation](https://m3.material.io/).
+## Acknowledgements
+
+Built on the principles and guidelines of [Material 3](https://m3.material.io/) and inspired by the [Fluent Design Navigation View](https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview).
