@@ -41,42 +41,45 @@ class NavigationViewController extends ChangeNotifier {
     this.onDestinationIndex,
     this.onDestinationPath,
     required TickerProvider vsync,
-  })  : assert(length >= 0),
-        assert(
-          destinationType == DestinationTypes.byIndex
-              ? (initialIndex == null ||
-                  (initialIndex >= 0 &&
-                      (length == 0
-                          ? initialIndex == 0
-                          : initialIndex < length)))
-              : true,
-          'When destinationType is byIndex, initialIndex must be valid for the given length',
-        ),
-        assert(
-          destinationType == DestinationTypes.byPath
-              ? initialPath != null
-              : true,
-          'When destinationType is byPath, initialPath must be provided',
-        ),
-        _selectedIndex =
-            destinationType == DestinationTypes.byIndex ? initialIndex : null,
-        _previousIndex =
-            destinationType == DestinationTypes.byIndex ? initialIndex : null,
-        _previousIndices = destinationType == DestinationTypes.byIndex
-            ? (initialIndex != null ? [initialIndex] : <int>[])
-            : <int>[],
-        _selectedPath =
-            destinationType == DestinationTypes.byPath ? initialPath : null,
-        _previousPaths = destinationType == DestinationTypes.byPath
-            ? (initialPath != null ? [initialPath] : <String>[])
-            : <String>[],
-        _animationDuration = animationDuration ?? _kBaseSettleDuration,
-        _destinationAnimations = [],
-        _animationController = AnimationController(
-          value: 0.0,
-          vsync: vsync,
-          duration: animationDuration ?? _kBaseSettleDuration,
-        ) {
+  }) : assert(length >= 0),
+       assert(
+         destinationType == DestinationTypes.byIndex
+             ? (initialIndex == null ||
+                   (initialIndex >= 0 &&
+                       (length == 0
+                           ? initialIndex == 0
+                           : initialIndex < length)))
+             : true,
+         'When destinationType is byIndex, initialIndex must be valid for the given length',
+       ),
+       assert(
+         destinationType == DestinationTypes.byPath
+             ? initialPath != null
+             : true,
+         'When destinationType is byPath, initialPath must be provided',
+       ),
+       _selectedIndex = destinationType == DestinationTypes.byIndex
+           ? initialIndex
+           : null,
+       _previousIndex = destinationType == DestinationTypes.byIndex
+           ? initialIndex
+           : null,
+       _previousIndices = destinationType == DestinationTypes.byIndex
+           ? (initialIndex != null ? [initialIndex] : <int>[])
+           : <int>[],
+       _selectedPath = destinationType == DestinationTypes.byPath
+           ? initialPath
+           : null,
+       _previousPaths = destinationType == DestinationTypes.byPath
+           ? (initialPath != null ? [initialPath] : <String>[])
+           : <String>[],
+       _animationDuration = animationDuration ?? _kBaseSettleDuration,
+       _destinationAnimations = [],
+       _animationController = AnimationController(
+         value: 0.0,
+         vsync: vsync,
+         duration: animationDuration ?? _kBaseSettleDuration,
+       ) {
     if (kFlutterMemoryAllocationsEnabled) {
       ChangeNotifier.maybeDispatchObjectCreation(this);
     }
@@ -84,34 +87,6 @@ class NavigationViewController extends ChangeNotifier {
     // Initialize destination animations only for index-based navigation
     if (destinationType == DestinationTypes.byIndex) {
       _initializeDestinationAnimations(vsync);
-    }
-  }
-
-  // Private constructor used by `_copyWith`. This allows a new NavigationPaneController to
-  // be created without having to create a new AnimationController.
-  NavigationViewController._({
-    required int? selectedIndex,
-    required int? previousIndex,
-    required List<int> previousIndices,
-    required String? selectedPath,
-    required List<String> previousPath,
-    required AnimationController animationController,
-    required Duration animationDuration,
-    required this.length,
-    required this.destinationType,
-    required this.onDestinationIndex,
-    required this.onDestinationPath,
-    required List<AnimationController> destinationAnimations,
-  })  : _selectedIndex = selectedIndex,
-        _previousIndex = previousIndex,
-        _previousIndices = previousIndices,
-        _selectedPath = selectedPath,
-        _previousPaths = previousPath,
-        _animationController = animationController,
-        _animationDuration = animationDuration,
-        _destinationAnimations = destinationAnimations {
-    if (kFlutterMemoryAllocationsEnabled) {
-      ChangeNotifier.maybeDispatchObjectCreation(this);
     }
   }
 
