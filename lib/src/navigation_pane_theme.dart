@@ -33,6 +33,8 @@ class NavigationThemeData with Diagnosticable {
     this.indicatorColor,
     this.indicatorShape,
     this.indicatorSize,
+    this.menuIndicatorSize,
+    this.menuIndicatorAlignment,
     this.labelTextStyle,
     this.iconTheme,
     this.contentPadding,
@@ -101,6 +103,22 @@ class NavigationThemeData with Diagnosticable {
   /// The size of the [NavigationPane]'s selection indicator.
   final Size? indicatorSize;
 
+  /// The size of the selection indicator shown inside the compact flyout menu
+  /// (the [RawMenuAnchor] overlay used in medium/compact mode).
+  ///
+  /// When null, falls back to [indicatorSize]. Use this to give the flyout
+  /// indicator a different size from the inline indicator — for example, a
+  /// narrow left-side bar as in WinUI 3.
+  final Size? menuIndicatorSize;
+
+  /// The alignment of the selection indicator inside the compact flyout menu.
+  ///
+  /// When null, defaults to [AlignmentDirectional.centerStart], which fills
+  /// the item horizontally (the standard Material pill). Set this to, for
+  /// example, [AlignmentDirectional.centerStart] with a narrow
+  /// [menuIndicatorSize] width to achieve a WinUI 3-style left accent bar.
+  final AlignmentGeometry? menuIndicatorAlignment;
+
   /// The text style for [PaneItemDestination] labels in different states.
   final WidgetStateProperty<TextStyle?>? labelTextStyle;
 
@@ -134,8 +152,8 @@ class NavigationThemeData with Diagnosticable {
   /// The shape of a [PaneItemDestination]'s container in different states.
   final WidgetStateProperty<ShapeBorder?>? itemShape;
 
-  /// O padding interno para o conteúdo dentro de cada [PaneItemDestination].
-  /// Isso controla o espaçamento entre os elementos (ícone, texto, etc) dentro do item.
+  /// The internal padding for the content inside each [PaneItemDestination].
+  /// This controls the spacing between elements (icon, text, etc.) within the item.
   final EdgeInsetsGeometry? itemContentPadding;
 
   /// The margin around each [PaneItemDestination].
@@ -215,6 +233,8 @@ class NavigationThemeData with Diagnosticable {
     Color? indicatorColor,
     ShapeBorder? indicatorShape,
     Size? indicatorSize,
+    Size? menuIndicatorSize,
+    AlignmentGeometry? menuIndicatorAlignment,
     WidgetStateProperty<TextStyle?>? labelTextStyle,
     WidgetStateProperty<IconThemeData?>? iconTheme,
     WidgetStateProperty<EdgeInsetsGeometry?>? contentPadding,
@@ -248,8 +268,6 @@ class NavigationThemeData with Diagnosticable {
     Curve? itemAnimationCurve,
     WidgetStateProperty<double?>? itemElevation,
     WidgetStateProperty<Color?>? itemShadowColor,
-    Gradient? itemSelectedGradient,
-    Gradient? itemHoverGradient,
   }) {
     return NavigationThemeData(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -263,6 +281,9 @@ class NavigationThemeData with Diagnosticable {
       indicatorColor: indicatorColor ?? this.indicatorColor,
       indicatorShape: indicatorShape ?? this.indicatorShape,
       indicatorSize: indicatorSize ?? this.indicatorSize,
+      menuIndicatorSize: menuIndicatorSize ?? this.menuIndicatorSize,
+      menuIndicatorAlignment:
+          menuIndicatorAlignment ?? this.menuIndicatorAlignment,
       labelTextStyle: labelTextStyle ?? this.labelTextStyle,
       iconTheme: iconTheme ?? this.iconTheme,
       contentPadding: contentPadding ?? this.contentPadding,
@@ -334,6 +355,10 @@ class NavigationThemeData with Diagnosticable {
       indicatorColor: Color.lerp(a?.indicatorColor, b?.indicatorColor, t),
       indicatorShape: ShapeBorder.lerp(a?.indicatorShape, b?.indicatorShape, t),
       indicatorSize: Size.lerp(a?.indicatorSize, b?.indicatorSize, t),
+      menuIndicatorSize:
+          Size.lerp(a?.menuIndicatorSize, b?.menuIndicatorSize, t),
+      menuIndicatorAlignment:
+          t < 0.5 ? a?.menuIndicatorAlignment : b?.menuIndicatorAlignment,
       labelTextStyle: WidgetStateProperty.lerp<TextStyle?>(
         a?.labelTextStyle,
         b?.labelTextStyle,
@@ -464,6 +489,8 @@ class NavigationThemeData with Diagnosticable {
         indicatorColor,
         indicatorShape,
         indicatorSize,
+        menuIndicatorSize,
+        menuIndicatorAlignment,
         labelTextStyle,
         iconTheme,
         contentPadding,
@@ -519,6 +546,8 @@ class NavigationThemeData with Diagnosticable {
         other.indicatorColor == indicatorColor &&
         other.indicatorShape == indicatorShape &&
         other.indicatorSize == indicatorSize &&
+        other.menuIndicatorSize == menuIndicatorSize &&
+        other.menuIndicatorAlignment == menuIndicatorAlignment &&
         other.labelTextStyle == labelTextStyle &&
         other.iconTheme == iconTheme &&
         other.contentPadding == contentPadding &&
@@ -595,6 +624,20 @@ class NavigationThemeData with Diagnosticable {
       DiagnosticsProperty<Size>(
         'indicatorSize',
         indicatorSize,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<Size>(
+        'menuIndicatorSize',
+        menuIndicatorSize,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<AlignmentGeometry>(
+        'menuIndicatorAlignment',
+        menuIndicatorAlignment,
         defaultValue: null,
       ),
     );

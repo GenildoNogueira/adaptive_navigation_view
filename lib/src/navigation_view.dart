@@ -270,7 +270,10 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
     );
 
     if (hasChild(_NavigationViewSlot.body)) {
-      final bodyMaxWidth = fullWidthConstraints.maxWidth - contentPane;
+      final double bodyMaxWidth = math.max(
+        0.0,
+        fullWidthConstraints.maxWidth - contentPane,
+      );
       final double bodyMaxHeight = math.max(0.0, contentBottom - contentTop);
 
       final BoxConstraints bodyConstraints = _BodyBoxConstraints(
@@ -315,9 +318,6 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
 class NavigationView extends StatefulWidget {
   const NavigationView({
     super.key,
-    this.length = 0,
-    this.initialIndex,
-    this.initialPath,
     this.animationDuration,
     required this.controller,
     required this.appBar,
@@ -336,16 +336,7 @@ class NavigationView extends StatefulWidget {
     this.expandedBreakpoint = const WidthBreakpoint(start: 840),
     this.compactPaneWidth,
     this.openPaneWidth,
-  }) : assert(length >= 0);
-
-  /// The total number of navigable destinations.
-  final int length;
-
-  /// The initial index of the selected destination.
-  final int? initialIndex;
-
-  /// The initial path of the selected destination.
-  final String? initialPath;
+  });
 
   /// The duration of pane animations.
   final Duration? animationDuration;
@@ -594,29 +585,9 @@ class NavigationViewState extends State<NavigationView>
       curve: Curves.easeInOutCubic,
     );
 
-    _rebuildPaneWidthAnimation();
+    _paneWidthAnimation = controller.animation!..addListener(_rebuild);
+
     controller.addListener(_onPaneControllerChanged);
-  }
-
-  void _rebuildPaneWidthAnimation() {
-    _paneWidthAnimation?.removeListener(_rebuild);
-
-    final theme = NavigationTheme.of(context);
-    final double openWidth =
-        widget.openPaneWidth ?? theme?.openWidth ?? kOpenNavigationPaneWidth;
-    final double compactWidth = widget.compactPaneWidth ??
-        theme?.compactWidth ??
-        kCompactNavigationPaneWidth;
-
-    _paneWidthAnimation = Tween<double>(
-      begin: compactWidth,
-      end: openWidth,
-    ).animate(
-      CurvedAnimation(
-        parent: controller.animation!,
-        curve: Curves.easeInOutCubic,
-      ),
-    )..addListener(_rebuild);
   }
 
   @override
@@ -640,11 +611,6 @@ class NavigationViewState extends State<NavigationView>
     if (widget.animationDuration != oldWidget.animationDuration) {
       _displayModeTransitionController.duration =
           widget.animationDuration ?? const Duration(milliseconds: 300);
-    }
-
-    if (widget.compactPaneWidth != oldWidget.compactPaneWidth ||
-        widget.openPaneWidth != oldWidget.openPaneWidth) {
-      _rebuildPaneWidthAnimation();
     }
 
     if (controller.animation != null) {

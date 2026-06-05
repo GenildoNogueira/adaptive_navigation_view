@@ -178,24 +178,13 @@ class NavigationPane extends StatelessWidget {
         currentProcessingFlatIndex +=
             1 + (destinationData.children?.length ?? 0);
       } else {
-        // Leaf item: This is a directly selectable destination.
-        final bool isSelected =
-            controller.destinationType == DestinationTypes.byIndex
-                ? currentGlobalSelectedIndex != null &&
-                    itemSelfFlatIndex == currentGlobalSelectedIndex
-                : destinationData.path != null &&
-                    destinationData.path == controller.selectedPath;
-
-        itemWidget = _SelectableAnimatedBuilder(
-          key: ValueKey('item_$itemSelfFlatIndex'), // Use its unique flat index
-          animation: controller.getDestinationAnimation(itemSelfFlatIndex),
-          isSelected: isSelected,
-          child: _PaneDestinationInfo(
-            index: itemSelfFlatIndex, // Leaf's own selectable index
-            path: destinationData.path, // Leaf's own selectable path
-            child: itemDataWidget, // The PaneItemDestination widget itself
-          ),
+        itemWidget = _PaneDestinationInfo(
+          //key: ValueKey('item_$itemSelfFlatIndex'),
+          index: itemSelfFlatIndex, // Leaf's own selectable index
+          path: destinationData.path, // Leaf's own selectable path
+          child: itemDataWidget, // The PaneItemDestination widget itself
         );
+
         // Advance flat index: 1 for this leaf item
         currentProcessingFlatIndex += 1;
       }
@@ -624,8 +613,6 @@ class PaneControllerState extends State<PaneController>
         : openWidth;
   }
 
-  bool _previouslyOpened = false;
-
   void _move(DragUpdateDetails details) {
     double delta = details.primaryDelta! / _width;
     switch (widget.alignment) {
@@ -640,13 +627,6 @@ class PaneControllerState extends State<PaneController>
       case TextDirection.ltr:
         _animationController.value += delta;
     }
-
-    final bool opened = _animationController.value > 0.5;
-    //if (opened != _previouslyOpened) {
-    //  _previouslyOpened = opened;
-    //opened ? widget.paneController.open() : widget.paneController.close();
-    //}
-    _previouslyOpened = opened;
   }
 
   void _settle(DragEndDetails details) {

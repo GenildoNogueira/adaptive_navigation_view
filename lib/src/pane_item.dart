@@ -149,6 +149,11 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       vsync: this,
     );
 
+    _isSelected = _isDestinationSelected();
+    if (_isSelected) {
+      _selectionController.value = 1.0;
+    }
+
     _rotationAnimation = Tween<double>(
       begin: 0.0,
       end: 0.25,
@@ -192,12 +197,14 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     final bool wasSelected = _isSelected;
     _isSelected = _isDestinationSelected();
 
-    if (_isSelected != wasSelected) {
+    if (_isSelected != wasSelected && _animationsInitialized) {
       if (_isSelected) {
         _selectionController.forward();
       } else {
         _selectionController.reverse();
       }
+      setState(() {});
+    } else if (_isSelected != wasSelected) {
       setState(() {});
     }
   }
@@ -530,37 +537,91 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
             return RawMenuAnchor(
               controller: _menuController,
               childFocusNode: focusNode,
+              onCloseRequested: (hideOverlay) {
+                hideOverlay();
+              },
+              onClose: _clearFocus,
               overlayBuilder: (BuildContext context, RawMenuOverlayInfo info) {
+                final navTheme = NavigationTheme.of(context);
+                final navDefaults = _NavigationDefaults(context);
+                final materialTheme = Theme.of(context);
+                final menuTheme = MenuTheme.of(context);
+
+                final overlayColor = menuTheme.style?.backgroundColor
+                        ?.resolve(<WidgetState>{}) ??
+                    materialTheme.colorScheme.surfaceContainer;
+
+                final overlayShadowColor =
+                    menuTheme.style?.shadowColor?.resolve(<WidgetState>{}) ??
+                        materialTheme.colorScheme.shadow;
+
+                final overlayElevation =
+                    menuTheme.style?.elevation?.resolve(<WidgetState>{}) ?? 3.0;
+
+                final overlayShape = menuTheme.style?.shape
+                        ?.resolve(<WidgetState>{}) as RoundedRectangleBorder? ??
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    );
+
+                final overlayPadding =
+                    menuTheme.style?.padding?.resolve(<WidgetState>{}) ??
+                        const EdgeInsets.symmetric(vertical: 4);
+
+                // Resolve anchor position with RTL support and basic
+                // viewport clamping to avoid overflow off-screen.
+                final screenSize = MediaQuery.sizeOf(context);
+                const double menuMinWidth = 168.0;
+
+                double left;
+                if (textDirection == TextDirection.rtl) {
+                  left = info.anchorRect.left - menuMinWidth;
+                  if (left < 0) left = info.anchorRect.right;
+                } else {
+                  left = info.anchorRect.right;
+                  if (left + menuMinWidth > screenSize.width) {
+                    left = info.anchorRect.left - menuMinWidth;
+                  }
+                }
+
+                double top = info.anchorRect.top;
+                // Clamp vertically so the menu doesn't start below the screen.
+                final double maxTop = screenSize.height - 56.0;
+                if (top > maxTop) top = maxTop;
+
                 return Positioned(
-                  top: info.anchorRect.bottom,
-                  left: textDirection == TextDirection.rtl
-                      ? info.anchorRect.left - 168
-                      : info.anchorRect.right,
+                  top: top,
+                  left: left,
                   child: Semantics(
                     scopesRoute: true,
                     explicitChildNodes: true,
                     child: TapRegion(
                       groupId: info.tapRegionGroupId,
                       onTapOutside: (PointerDownEvent event) {
-                        MenuController.maybeOf(context)?.close();
-                        _clearFocus();
+                        _menuController.close();
                       },
                       child: FocusScope(
                         child: IntrinsicWidth(
-                          child: Container(
+                          child: Material(
+                            type: MaterialType.card,
+                            color: overlayColor,
+                            shadowColor: overlayShadowColor,
+                            elevation: overlayElevation,
+                            shape: overlayShape,
                             clipBehavior: Clip.antiAlias,
-                            constraints: const BoxConstraints(minWidth: 168),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: kElevationToShadow[4],
-                            ),
-                            child: Shortcuts(
-                              shortcuts: _shortcuts,
-                              child: Column(
-                                children:
-                                    _buildMenuChildren(context, textDirection),
+                            child: Padding(
+                              padding: overlayPadding,
+                              child: Shortcuts(
+                                shortcuts: _shortcuts,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: _buildMenuChildren(
+                                    context,
+                                    textDirection,
+                                    navTheme,
+                                    navDefaults,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -583,11 +644,14 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   List<Widget> _buildMenuChildren(
     BuildContext context,
     TextDirection textDirection,
+    NavigationThemeData? theme,
+    NavigationThemeData navDefaults,
   ) {
     if (!widget.destination.hasChildren) return [];
 
-    final theme = NavigationTheme.of(context);
-    final defaults = _NavigationDefaults(context);
+    // Consume MenuButtonTheme so the host Material theme is obeyed.
+    final menuButtonTheme = MenuButtonTheme.of(context);
+    final materialTheme = Theme.of(context);
 
     return widget.destination.children!.map((child) {
       final bool isChildSelected = _isChildSelected(child);
@@ -596,66 +660,135 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
 
       final TextStyle resolvedTextStyle =
           (theme?.labelTextStyle?.resolve(states) ??
-              defaults.labelTextStyle!.resolve(states))!;
+              navDefaults.labelTextStyle!.resolve(states))!;
 
-      final OutlinedBorder indicatorShape =
-          (theme?.indicatorShape ?? defaults.indicatorShape)! as OutlinedBorder;
+      final OutlinedBorder indicatorShape = (theme?.indicatorShape ??
+          navDefaults.indicatorShape)! as OutlinedBorder;
+
+      // Merge host MenuButtonTheme with local overrides so neither wins
+      // unconditionally — host theme provides defaults, local overrides
+      // take precedence only for properties this widget owns.
+      final ButtonStyle localStyle = ButtonStyle(
+        overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.hovered)) {
+            return materialTheme.colorScheme.onSurface.withValues(alpha: 0.08);
+          }
+          if (states.contains(WidgetState.pressed)) {
+            return materialTheme.colorScheme.onSurface.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.focused)) {
+            return materialTheme.colorScheme.onSurface.withValues(alpha: 0.10);
+          }
+          return null;
+        }),
+        padding: WidgetStatePropertyAll(
+          theme?.itemContentPadding ??
+              navDefaults.itemContentPadding ??
+              EdgeInsets.zero,
+        ),
+        shape: WidgetStatePropertyAll(indicatorShape),
+        // Ensure the item background is transparent so the overlay's
+        // Material color shows through (not the ButtonTheme default).
+        backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+        foregroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return materialTheme.colorScheme.onSurface.withValues(alpha: 0.38);
+          }
+          return null; // let label/icon color from NavigationTheme win
+        }),
+      );
+
+      final ButtonStyle mergedStyle =
+          menuButtonTheme.style?.merge(localStyle) ?? localStyle;
 
       return MenuItemButton(
-        //focusNode: focusNode,
-        style: ButtonStyle(
-          overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
-            if (states.contains(WidgetState.hovered)) {
-              return Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.08);
-            }
-            if (states.contains(WidgetState.pressed)) {
-              return Theme.of(context).colorScheme.onSurface.withAlpha(40);
-            }
-            return null;
-          }),
-          shape: WidgetStatePropertyAll(indicatorShape),
+        style: mergedStyle,
+        leadingIcon: _buildIcon(
+          context,
+          isChildSelected,
+          child.icon,
+          child.selectedIcon,
+          theme,
+          navDefaults,
         ),
-        onPressed: () {
-          _menuController.close();
-          if (child.enabled) {
-            _selectChild(child);
-          }
-        },
-        child: Stack(
-          alignment: AlignmentDirectional.centerStart,
-          textDirection: textDirection,
-          children: [
-            if (isChildSelected)
-              PaneIndicator(
-                animation: const AlwaysStoppedAnimation(1.0),
-                color: theme?.indicatorColor ?? defaults.indicatorColor!,
-                shape: theme?.indicatorShape ?? defaults.indicatorShape!,
-                width: (theme?.indicatorSize ?? defaults.indicatorSize!).width,
-                height:
-                    (theme?.indicatorSize ?? defaults.indicatorSize!).height,
+        onPressed: child.enabled
+            ? () {
+                _menuController.close();
+                _selectChild(child);
+              }
+            : null,
+        child: Builder(
+          builder: (context) {
+            // Resolve the indicator size for the flyout context.
+            // menuIndicatorSize falls back to indicatorSize so the default
+            // Material pill still works out-of-the-box; override it to get a
+            // WinUI 3-style narrow left bar or any other shape.
+            final resolvedIndicatorSize = theme?.menuIndicatorSize ??
+                navDefaults.menuIndicatorSize ??
+                (theme?.indicatorSize ?? navDefaults.indicatorSize!);
+
+            // Resolve indicator alignment — defaults to fill (centerStart with
+            // no explicit width constraint = full width), but can be pinned to
+            // the leading edge for accent-bar styles.
+            final resolvedAlignment = theme?.menuIndicatorAlignment ??
+                navDefaults.menuIndicatorAlignment ??
+                AlignmentDirectional.center;
+
+            // The item height drives the Stack so Positioned.fill has a real
+            // anchor. We read it from itemSize so it honours the theme.
+            final itemHeight =
+                (theme?.itemSize ?? navDefaults.itemSize!).height;
+
+            return SizedBox(
+              height: itemHeight,
+              child: Stack(
+                alignment: resolvedAlignment,
+                textDirection: textDirection,
+                children: [
+                  Positioned.fill(
+                    child: Align(
+                      alignment: resolvedAlignment,
+                      child: SizedBox(
+                        width: resolvedIndicatorSize.width == double.infinity
+                            ? null // let Align stretch it to full width
+                            : resolvedIndicatorSize.width,
+                        height: resolvedIndicatorSize.height == double.infinity
+                            ? null
+                            : resolvedIndicatorSize.height,
+                        child: AnimatedOpacity(
+                          opacity: isChildSelected ? 1.0 : 0.0,
+                          duration: theme?.itemAnimationDuration ??
+                              navDefaults.itemAnimationDuration ??
+                              const Duration(milliseconds: 200),
+                          curve: theme?.itemAnimationCurve ??
+                              navDefaults.itemAnimationCurve ??
+                              Curves.easeInOut,
+                          child: DecoratedBox(
+                            decoration: ShapeDecoration(
+                              color: theme?.indicatorColor ??
+                                  navDefaults.indicatorColor!,
+                              shape: (theme?.indicatorShape ??
+                                  navDefaults.indicatorShape!),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    spacing: (theme?.itemSpacing ?? navDefaults.itemSpacing!),
+                    textDirection: textDirection,
+                    children: [
+                      DefaultTextStyle.merge(
+                        style: resolvedTextStyle,
+                        child: child.label,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            Row(
-              spacing: (theme?.itemSpacing ?? defaults.itemSpacing!),
-              textDirection: textDirection,
-              children: [
-                _buildIcon(
-                  context,
-                  isChildSelected,
-                  child.icon,
-                  child.selectedIcon,
-                  theme,
-                  defaults,
-                ),
-                DefaultTextStyle.merge(
-                  style: resolvedTextStyle,
-                  child: child.label,
-                ),
-              ],
-            ),
-          ],
+            );
+          },
         ),
       );
     }).toList();
@@ -831,7 +964,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
         parent: _expansionController,
         curve: animationCurve,
       ),
-      axisAlignment: -1.0,
+      alignment: Alignment.centerLeft,
       child: Padding(
         padding: EdgeInsetsDirectional.only(start: childrenIndent),
         child: Column(

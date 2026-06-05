@@ -200,14 +200,28 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _NavigationAppBarState extends State<NavigationAppBar> {
+  // Cache _AppBarDefaults so its late-final fields (Theme, ColorScheme,
+  // TextTheme) are not re-evaluated on every rebuild.
+  _AppBarDefaults? _cachedDefaults;
+  ThemeData? _cachedTheme;
+
+  _AppBarDefaults _getDefaults(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_cachedTheme != theme) {
+      _cachedTheme = theme;
+      _cachedDefaults = _AppBarDefaults(context);
+    }
+    return _cachedDefaults!;
+  }
+
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
-    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final double topPadding = MediaQuery.viewPaddingOf(context).top;
     final ThemeData theme = Theme.of(context);
     final IconButtonThemeData iconButtonTheme = IconButtonTheme.of(context);
     final appBarTheme = AppBarTheme.of(context);
-    final defaults = _AppBarDefaults(context);
+    final defaults = _getDefaults(context);
     final _NavigationViewScope navigationViewScope =
         _NavigationViewScope.of(context);
 
@@ -275,29 +289,16 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
 
     Widget? actions;
     if (widget.actions != null && widget.actions!.isNotEmpty) {
-      actions = Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: widget.actions!,
-      );
-    }
-
-    // Allow the trailing actions to have their own theme if necessary.
-    if (actions != null) {
       final IconButtonThemeData effectiveActionsIconButtonTheme;
       if (actionsIconTheme == defaults.actionsIconTheme) {
         effectiveActionsIconButtonTheme = iconButtonTheme;
       } else {
-        final ButtonStyle actionsIconButtonStyle = IconButton.styleFrom(
-          foregroundColor: actionsIconTheme.color,
-          iconSize: actionsIconTheme.size,
-        );
-
+        // Build the merged style directly without the intermediate
+        // IconButton.styleFrom allocation.
         effectiveActionsIconButtonTheme = IconButtonThemeData(
           style: iconButtonTheme.style?.copyWith(
-            foregroundColor: actionsIconButtonStyle.foregroundColor,
-            overlayColor: actionsIconButtonStyle.overlayColor,
-            iconSize: actionsIconButtonStyle.iconSize,
+            foregroundColor: WidgetStatePropertyAll(actionsIconTheme.color),
+            iconSize: WidgetStatePropertyAll(actionsIconTheme.size),
           ),
         );
       }
@@ -306,7 +307,11 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
         data: effectiveActionsIconButtonTheme,
         child: IconTheme.merge(
           data: actionsIconTheme,
-          child: actions,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: widget.actions!,
+          ),
         ),
       );
     }
@@ -366,7 +371,7 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
           surfaceTintColor:
               appBarTheme.surfaceTintColor ?? defaults.surfaceTintColor,
           child: Padding(
-            padding: viewPadding,
+            padding: EdgeInsets.only(top: topPadding),
             child: Semantics(
               explicitChildNodes: true,
               child: appBar,
