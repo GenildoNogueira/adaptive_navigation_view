@@ -649,12 +649,24 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   ) {
     if (!widget.destination.hasChildren) return [];
 
-    // Consume MenuButtonTheme so the host Material theme is obeyed.
     final menuButtonTheme = MenuButtonTheme.of(context);
     final materialTheme = Theme.of(context);
 
-    return widget.destination.children!.map((child) {
-      final bool isChildSelected = _isChildSelected(child);
+    final parentInfo = _PaneDestinationInfo.maybeOf(context);
+    final parentIndex = parentInfo?.index ?? 0;
+
+    int currentChildIndex = parentIndex + 1;
+    final List<Widget> menuItems = [];
+
+    for (final child in widget.destination.children!) {
+      final int childFlatIndex = currentChildIndex;
+
+      currentChildIndex += 1;
+      if (child.hasChildren) {
+        currentChildIndex += _countSlots(child.children!);
+      }
+
+      final bool isChildSelected = _isChildSelected(child, childFlatIndex);
       final Set<WidgetState> states =
           isChildSelected ? {WidgetState.selected} : <WidgetState>{};
 
@@ -665,9 +677,6 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       final OutlinedBorder indicatorShape = (theme?.indicatorShape ??
           navDefaults.indicatorShape)! as OutlinedBorder;
 
-      // Merge host MenuButtonTheme with local overrides so neither wins
-      // unconditionally — host theme provides defaults, local overrides
-      // take precedence only for properties this widget owns.
       final ButtonStyle localStyle = ButtonStyle(
         overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.hovered)) {
@@ -687,114 +696,118 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
               EdgeInsets.zero,
         ),
         shape: WidgetStatePropertyAll(indicatorShape),
-        // Ensure the item background is transparent so the overlay's
-        // Material color shows through (not the ButtonTheme default).
         backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
         foregroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.disabled)) {
             return materialTheme.colorScheme.onSurface.withValues(alpha: 0.38);
           }
-          return null; // let label/icon color from NavigationTheme win
+          return null;
         }),
       );
 
       final ButtonStyle mergedStyle =
           menuButtonTheme.style?.merge(localStyle) ?? localStyle;
 
-      return MenuItemButton(
-        style: mergedStyle,
-        leadingIcon: _buildIcon(
-          context,
-          isChildSelected,
-          child.icon,
-          child.selectedIcon,
-          theme,
-          navDefaults,
-        ),
-        onPressed: child.enabled
-            ? () {
-                _menuController.close();
-                _selectChild(child);
-              }
-            : null,
-        child: Builder(
-          builder: (context) {
-            // Resolve the indicator size for the flyout context.
-            // menuIndicatorSize falls back to indicatorSize so the default
-            // Material pill still works out-of-the-box; override it to get a
-            // WinUI 3-style narrow left bar or any other shape.
-            final resolvedIndicatorSize = theme?.menuIndicatorSize ??
-                navDefaults.menuIndicatorSize ??
-                (theme?.indicatorSize ?? navDefaults.indicatorSize!);
+      menuItems.add(
+        MenuItemButton(
+          style: mergedStyle,
+          leadingIcon: _buildIcon(
+            context,
+            isChildSelected,
+            child.icon,
+            child.selectedIcon,
+            theme,
+            navDefaults,
+          ),
+          onPressed: child.enabled
+              ? () {
+                  _menuController.close();
+                  _selectChild(child, childFlatIndex);
+                }
+              : null,
+          child: Builder(
+            builder: (context) {
+              final resolvedIndicatorSize = theme?.menuIndicatorSize ??
+                  navDefaults.menuIndicatorSize ??
+                  (theme?.indicatorSize ?? navDefaults.indicatorSize!);
 
-            // Resolve indicator alignment — defaults to fill (centerStart with
-            // no explicit width constraint = full width), but can be pinned to
-            // the leading edge for accent-bar styles.
-            final resolvedAlignment = theme?.menuIndicatorAlignment ??
-                navDefaults.menuIndicatorAlignment ??
-                AlignmentDirectional.center;
+              final resolvedAlignment = theme?.menuIndicatorAlignment ??
+                  navDefaults.menuIndicatorAlignment ??
+                  AlignmentDirectional.center;
 
-            // The item height drives the Stack so Positioned.fill has a real
-            // anchor. We read it from itemSize so it honours the theme.
-            final itemHeight =
-                (theme?.itemSize ?? navDefaults.itemSize!).height;
+              final itemHeight =
+                  (theme?.itemSize ?? navDefaults.itemSize!).height;
 
-            return SizedBox(
-              height: itemHeight,
-              child: Stack(
-                alignment: resolvedAlignment,
-                textDirection: textDirection,
-                children: [
-                  Positioned.fill(
-                    child: Align(
-                      alignment: resolvedAlignment,
-                      child: SizedBox(
-                        width: resolvedIndicatorSize.width == double.infinity
-                            ? null // let Align stretch it to full width
-                            : resolvedIndicatorSize.width,
-                        height: resolvedIndicatorSize.height == double.infinity
-                            ? null
-                            : resolvedIndicatorSize.height,
-                        child: AnimatedOpacity(
-                          opacity: isChildSelected ? 1.0 : 0.0,
-                          duration: theme?.itemAnimationDuration ??
-                              navDefaults.itemAnimationDuration ??
-                              const Duration(milliseconds: 200),
-                          curve: theme?.itemAnimationCurve ??
-                              navDefaults.itemAnimationCurve ??
-                              Curves.easeInOut,
-                          child: DecoratedBox(
-                            decoration: ShapeDecoration(
-                              color: theme?.indicatorColor ??
-                                  navDefaults.indicatorColor!,
-                              shape: (theme?.indicatorShape ??
-                                  navDefaults.indicatorShape!),
+              return SizedBox(
+                height: itemHeight,
+                child: Stack(
+                  alignment: resolvedAlignment,
+                  textDirection: textDirection,
+                  children: [
+                    Positioned.fill(
+                      child: Align(
+                        alignment: resolvedAlignment,
+                        child: SizedBox(
+                          width: resolvedIndicatorSize.width == double.infinity
+                              ? null
+                              : resolvedIndicatorSize.width,
+                          height:
+                              resolvedIndicatorSize.height == double.infinity
+                                  ? null
+                                  : resolvedIndicatorSize.height,
+                          child: AnimatedOpacity(
+                            opacity: isChildSelected ? 1.0 : 0.0,
+                            duration: theme?.itemAnimationDuration ??
+                                navDefaults.itemAnimationDuration ??
+                                const Duration(milliseconds: 200),
+                            curve: theme?.itemAnimationCurve ??
+                                navDefaults.itemAnimationCurve ??
+                                Curves.easeInOut,
+                            child: DecoratedBox(
+                              decoration: ShapeDecoration(
+                                color: theme?.indicatorColor ??
+                                    navDefaults.indicatorColor!,
+                                shape: (theme?.indicatorShape ??
+                                    navDefaults.indicatorShape!),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Row(
-                    spacing: (theme?.itemSpacing ?? navDefaults.itemSpacing!),
-                    textDirection: textDirection,
-                    children: [
-                      DefaultTextStyle.merge(
-                        style: resolvedTextStyle,
-                        child: child.label,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
+                    Row(
+                      spacing: (theme?.itemSpacing ?? navDefaults.itemSpacing!),
+                      textDirection: textDirection,
+                      children: [
+                        DefaultTextStyle.merge(
+                          style: resolvedTextStyle,
+                          child: child.label,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       );
-    }).toList();
+    }
+    return menuItems;
   }
 
-  bool _isChildSelected(PaneItemDestination child) {
+  int _countSlots(List<PaneItemDestination> items) {
+    int count = 0;
+    for (final item in items) {
+      count++;
+      if (item.hasChildren) {
+        count += _countSlots(item.children!);
+      }
+    }
+    return count;
+  }
+
+  bool _isChildSelected(PaneItemDestination child, int childFlatIndex) {
     if (_navigationController == null) return false;
 
     // Check path-based selection first
@@ -803,16 +816,13 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     }
     if (_navigationController!.selectedIndex != null) {
       // For index-based selection, we need to get the destination info
-      final destinationInfo = _PaneDestinationInfo.maybeOf(context);
-      if (destinationInfo != null) {
-        return _navigationController!.selectedIndex == destinationInfo.index;
-      }
+      return _navigationController!.selectedIndex == childFlatIndex;
     }
 
     return false;
   }
 
-  void _selectChild(PaneItemDestination child) {
+  void _selectChild(PaneItemDestination child, int childFlatIndex) {
     if (_navigationController == null || !child.enabled) return;
 
     if (child.path != null) {
@@ -820,10 +830,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       return;
     }
 
-    final index = _PaneDestinationInfo.maybeOf(context)?.index;
-    if (index != null) {
-      _navigationController!.selectDestinationByIndex(index);
-    }
+    _navigationController!.selectDestinationByIndex(childFlatIndex);
   }
 
   Widget _buildIcon(
@@ -959,6 +966,29 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
         defaults.itemAnimationCurve ??
         Curves.easeInOut;
 
+    final parentInfo = _PaneDestinationInfo.maybeOf(context);
+    final parentIndex = parentInfo?.index ?? 0;
+
+    final List<Widget> childWidgets = [];
+    int currentChildIndex = parentIndex + 1;
+
+    for (int i = 0; i < widget.destination.children!.length; i++) {
+      final child = widget.destination.children![i];
+
+      childWidgets.add(
+        _PaneDestinationInfo(
+          index: currentChildIndex,
+          path: child.path,
+          child: child,
+        ),
+      );
+
+      currentChildIndex += 1;
+      if (child.hasChildren) {
+        currentChildIndex += _countSlots(child.children!);
+      }
+    }
+
     return SizeTransition(
       sizeFactor: CurvedAnimation(
         parent: _expansionController,
@@ -968,17 +998,8 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       child: Padding(
         padding: EdgeInsetsDirectional.only(start: childrenIndent),
         child: Column(
-          children: [
-            for (int i = 0; i < widget.destination.children!.length; i++) ...[
-              _ChildDestinationWrapper(
-                parent: widget.destination,
-                child: widget.destination.children![i],
-              ),
-              if (i < widget.destination.children!.length - 1 &&
-                  childrenSpacing > 0)
-                SizedBox(height: childrenSpacing),
-            ],
-          ],
+          spacing: childrenSpacing,
+          children: childWidgets,
         ),
       ),
     );
@@ -1015,21 +1036,6 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
           scope.isPaneOpen && scope.paneActionMoveAnimationProgress > 0.5,
         DisplayMode.medium => scope.isPaneOpen,
       };
-}
-
-class _ChildDestinationWrapper extends StatelessWidget {
-  const _ChildDestinationWrapper({
-    required this.parent,
-    required this.child,
-  });
-
-  final PaneItemDestination parent;
-  final PaneItemDestination child;
-
-  @override
-  Widget build(BuildContext context) {
-    return child;
-  }
 }
 
 class PaneIndicator extends StatelessWidget {
@@ -1080,66 +1086,5 @@ class _PaneDestinationInfo extends InheritedWidget {
   @override
   bool updateShouldNotify(_PaneDestinationInfo oldWidget) {
     return index != oldWidget.index || path != oldWidget.path;
-  }
-}
-
-class _SelectableAnimatedBuilder extends StatefulWidget {
-  /// Builds and maintains an [AnimationController] that will animate from 0 to
-  /// 1 and back depending on when [isSelected] is true.
-  const _SelectableAnimatedBuilder({
-    super.key,
-    required this.animation,
-    required this.isSelected,
-    required this.child,
-  });
-
-  final Animation<double> animation;
-  final bool isSelected;
-  final Widget child;
-
-  @override
-  State<_SelectableAnimatedBuilder> createState() =>
-      _SelectableAnimatedBuilderState();
-}
-
-class _SelectableAnimatedBuilderState extends State<_SelectableAnimatedBuilder>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: kThemeAnimationDuration,
-      vsync: this,
-    );
-    _controller.value = widget.isSelected ? 1.0 : 0.0;
-  }
-
-  @override
-  void didUpdateWidget(_SelectableAnimatedBuilder oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isSelected != oldWidget.isSelected) {
-      if (widget.isSelected) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      child: widget.child,
-      builder: (context, child) => child!,
-    );
   }
 }

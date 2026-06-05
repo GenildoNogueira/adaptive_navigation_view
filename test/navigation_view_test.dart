@@ -194,7 +194,8 @@ void main() {
       expect(navigationViewState.isPaneOpen, isFalse);
     });
 
-    testWidgets('Shows selected indicator for a child PaneItemDestination',
+    testWidgets(
+        'Shows selected indicator for a child PaneItemDestination in expanded mode',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -205,7 +206,7 @@ void main() {
       });
 
       final controller = NavigationViewController(
-        length: 1,
+        length: 2, // Parent (0), Child (1)
         initialIndex: 0,
         destinationType: DestinationTypes.byIndex,
         vsync: const TestVSync(),
@@ -252,13 +253,10 @@ void main() {
       await tester.tap(find.text('Child'));
       await tester.pumpAndSettle();
 
-      // At 1200px the pane is in expanded mode, so the child is rendered
-      // inline via _buildChildrenSection (a plain PaneItemDestination, not a
-      // flyout MenuItemButton). The selection indicator is a PaneIndicator
-      // widget sitting in the same Stack as the label row.
-      //
-      // Anchor on the InkWell that wraps each item — it is a genuine ancestor
-      // of Text('Child') — then verify PaneIndicator is present within it.
+      // Flat index check: Parent = 0, Child = 1
+      expect(controller.selectedIndex, 1);
+
+      // Verify PaneIndicator is present within the child's InkWell
       final childTextFinder = find.text('Child');
       expect(childTextFinder, findsOneWidget);
 
@@ -266,8 +264,6 @@ void main() {
         of: childTextFinder,
         matching: find.byType(InkWell),
       );
-      // There may be multiple InkWells in the tree; at least one must be
-      // the item row that also contains the PaneIndicator.
       expect(inkWellFinder, findsWidgets);
 
       final indicatorFinder = find.descendant(
@@ -276,5 +272,297 @@ void main() {
       );
       expect(indicatorFinder, findsWidgets);
     });
+
+    testWidgets(
+        'Tapping child in compact mode popup selects correct flat index',
+        (WidgetTester tester) async {
+      // 700px width triggers Medium/Compact mode
+      tester.view.physicalSize = const Size(700, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final controller = NavigationViewController(
+        length: 3, // Folder (0), File A (1), File B (2)
+        initialIndex: 0,
+        destinationType: DestinationTypes.byIndex,
+        vsync: const TestVSync(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(700, 800)),
+            child: Scaffold(
+              body: NavigationView(
+                appBar: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: SizedBox(),
+                ),
+                controller: controller,
+                pane: const NavigationPane(
+                  destinations: [
+                    PaneItemDestination(
+                      icon: Icon(Icons.folder),
+                      label: Text('Folder'),
+                      children: [
+                        PaneItemDestination(
+                          icon: Icon(Icons.insert_drive_file),
+                          label: Text('File A'),
+                        ),
+                        PaneItemDestination(
+                          icon: Icon(Icons.insert_drive_file),
+                          label: Text('File B'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap parent to open popup menu
+      await tester.tap(find.byIcon(Icons.folder));
+      await tester.pumpAndSettle();
+
+      // The menu is opened in an overlay. Tap 'File B'.
+      // find.last is used because MenuAnchor retains the widget in the tree (hidden) as well as the overlay
+      await tester.tap(find.text('File B').last);
+      await tester.pumpAndSettle();
+
+      // Parent is 0, File A is 1, File B is 2.
+      expect(controller.selectedIndex, 2);
+    });
+
+    testWidgets(
+        'Child selection indicator (AnimatedOpacity) is visible in compact mode popup',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(700, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      // Start with Child A (index 1) already selected
+      final controller = NavigationViewController(
+        length: 3,
+        initialIndex: 1,
+        destinationType: DestinationTypes.byIndex,
+        vsync: const TestVSync(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(700, 800)),
+            child: Scaffold(
+              body: NavigationView(
+                appBar: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: SizedBox(),
+                ),
+                controller: controller,
+                pane: const NavigationPane(
+                  destinations: [
+                    PaneItemDestination(
+                      icon: Icon(Icons.folder),
+                      label: Text('Folder'),
+                      children: [
+                        PaneItemDestination(
+                            icon: Icon(Icons.insert_drive_file),
+                            label: Text('File A')),
+                        PaneItemDestination(
+                            icon: Icon(Icons.insert_drive_file),
+                            label: Text('File B')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open the popup menu
+      await tester.tap(find.byIcon(Icons.folder));
+      await tester.pumpAndSettle();
+
+      // Find 'File A' in the overlay
+      final fileAItem = find.ancestor(
+        of: find.text('File A').last,
+        matching: find.byType(MenuItemButton),
+      );
+
+      // Find 'File B' in the overlay
+      final fileBItem = find.ancestor(
+        of: find.text('File B').last,
+        matching: find.byType(MenuItemButton),
+      );
+
+      // Verify File A's indicator opacity is 1.0 (visible)
+      final fileAOpacity = tester.widget<AnimatedOpacity>(
+        find.descendant(of: fileAItem, matching: find.byType(AnimatedOpacity)),
+      );
+      expect(fileAOpacity.opacity, 1.0);
+
+      // Verify File B's indicator opacity is 0.0 (hidden)
+      final fileBOpacity = tester.widget<AnimatedOpacity>(
+        find.descendant(of: fileBItem, matching: find.byType(AnimatedOpacity)),
+      );
+      expect(fileBOpacity.opacity, 0.0);
+    });
+
+    testWidgets(
+        'Tapping child in compact mode popup navigates by path correctly',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(700, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final controller = NavigationViewController(
+        initialPath: '/home',
+        destinationType: DestinationTypes.byPath,
+        vsync: const TestVSync(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(700, 800)),
+            child: Scaffold(
+              body: NavigationView(
+                appBar: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: SizedBox(),
+                ),
+                controller: controller,
+                pane: const NavigationPane(
+                  destinations: [
+                    PaneItemDestination(
+                      icon: Icon(Icons.folder),
+                      label: Text('Folder'),
+                      children: [
+                        PaneItemDestination(
+                          icon: Icon(Icons.insert_drive_file),
+                          label: Text('File A'),
+                          path: '/folder/file-a',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap parent to open popup menu
+      await tester.tap(find.byIcon(Icons.folder));
+      await tester.pumpAndSettle();
+
+      // Tap 'File A'
+      await tester.tap(find.text('File A').last);
+      await tester.pumpAndSettle();
+
+      // Check if the path was successfully updated
+      expect(controller.selectedPath, '/folder/file-a');
+    });
+  });
+
+  testWidgets(
+      'Tapping second child in expanded mode selects correct flat index',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    // Folder (0), File 1 (1), File 2 (2)
+    final controller = NavigationViewController(
+      length: 3,
+      initialIndex: 0,
+      destinationType: DestinationTypes.byIndex,
+      vsync: const TestVSync(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(1200, 800)),
+          child: Scaffold(
+            body: NavigationView(
+              appBar: const PreferredSize(
+                preferredSize: Size.fromHeight(56),
+                child: SizedBox(),
+              ),
+              controller: controller,
+              pane: const NavigationPane(
+                destinations: [
+                  PaneItemDestination(
+                    icon: Icon(Icons.folder),
+                    label: Text('Folder'),
+                    children: [
+                      PaneItemDestination(
+                        icon: Icon(Icons.insert_drive_file),
+                        label: Text('File 1'),
+                      ),
+                      PaneItemDestination(
+                        icon: Icon(Icons.insert_drive_file),
+                        label: Text('File 2'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              body: const SizedBox(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Expande a pasta (Folder)
+    await tester.tap(find.text('Folder'));
+    await tester.pumpAndSettle();
+
+    // Clica no segundo sub-item (File 2)
+    await tester.tap(find.text('File 2'));
+    await tester.pumpAndSettle();
+
+    // O índice flat esperado é 2 (Folder = 0, File 1 = 1, File 2 = 2)
+    expect(controller.selectedIndex, 2);
+
+    // (Opcional) Verifica se o indicador foi renderizado corretamente para o File 2
+    final file2TextFinder = find.text('File 2');
+    final inkWellFinder = find.ancestor(
+      of: file2TextFinder,
+      matching: find.byType(InkWell),
+    );
+    final indicatorFinder = find.descendant(
+      of: inkWellFinder,
+      matching: find.byType(PaneIndicator),
+    );
+    expect(indicatorFinder, findsWidgets);
   });
 }

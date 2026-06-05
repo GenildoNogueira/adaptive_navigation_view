@@ -704,14 +704,6 @@ class PaneControllerState extends State<PaneController>
     };
   }
 
-  bool get _isDesktop => switch (Theme.of(context).platform) {
-        TargetPlatform.macOS ||
-        TargetPlatform.linux ||
-        TargetPlatform.windows =>
-          true,
-        _ => false,
-      };
-
   Widget _buildPane(BuildContext context) {
     final bool paneIsStart = widget.alignment == PaneAlignment.start;
     final TextDirection textDirection = Directionality.of(context);

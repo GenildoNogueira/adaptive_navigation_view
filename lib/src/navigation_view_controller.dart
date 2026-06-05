@@ -564,9 +564,9 @@ class NavigationViewController extends ChangeNotifier {
   /// Works for both [DestinationTypes.byIndex] and [DestinationTypes.byPath].
   bool get canGoBack {
     return (destinationType == DestinationTypes.byIndex &&
-            _previousIndices.isNotEmpty) ||
+            _previousIndices.length > 1) ||
         (destinationType == DestinationTypes.byPath &&
-            _previousPaths.isNotEmpty);
+            _previousPaths.length > 1);
   }
 
   /// Gets the number of destinations in the navigation history.
