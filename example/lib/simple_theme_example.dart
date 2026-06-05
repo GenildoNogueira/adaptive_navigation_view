@@ -268,7 +268,3 @@ class SimpleThemeApp extends StatelessWidget {
     );
   }
 }
-
-void main() {
-  runApp(const SimpleThemeApp());
-}

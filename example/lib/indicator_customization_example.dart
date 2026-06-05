@@ -264,17 +264,3 @@ class _BenefitItem extends StatelessWidget {
     );
   }
 }
-
-/// How to use this example:
-///
-/// 1. Add this file to your example app
-/// 2. Import and use IndicatorCustomizationExample in your main app
-/// 3. To customize indicator dimensions globally:
-///    - Navigate to lib/src/navigation_view.dart
-///    - Modify the constants:
-///      ```dart
-///      const double _kIndicatorHeight = 40; // Your custom height
-///      const double _kIndicatorWidth = 64;  // Your custom width
-///      ```
-/// 4. All indicators will automatically use the new dimensions
-/// 5. Hot reload to see the changes instantly

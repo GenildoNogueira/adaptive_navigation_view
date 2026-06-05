@@ -388,7 +388,3 @@ class CustomPaneItemsApp extends StatelessWidget {
     );
   }
 }
-
-void main() {
-  runApp(const CustomPaneItemsApp());
-}
