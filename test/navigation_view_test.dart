@@ -193,5 +193,88 @@ void main() {
 
       expect(navigationViewState.isPaneOpen, isFalse);
     });
+
+    testWidgets('Shows selected indicator for a child PaneItemDestination',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final controller = NavigationViewController(
+        length: 1,
+        initialIndex: 0,
+        destinationType: DestinationTypes.byIndex,
+        vsync: const TestVSync(),
+      );
+
+      const child = PaneItemDestination(
+        icon: Icon(Icons.person),
+        label: Text('Child'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1200, 800)),
+            child: Scaffold(
+              body: NavigationView(
+                appBar: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: SizedBox(),
+                ),
+                controller: controller,
+                pane: const NavigationPane(
+                  destinations: [
+                    PaneItemDestination(
+                      icon: Icon(Icons.home),
+                      label: Text('Parent'),
+                      children: [child],
+                    ),
+                  ],
+                ),
+                body: const SizedBox(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open the parent to reveal the child
+      await tester.tap(find.text('Parent'));
+      await tester.pumpAndSettle();
+
+      // Select the child
+      await tester.tap(find.text('Child'));
+      await tester.pumpAndSettle();
+
+      // At 1200px the pane is in expanded mode, so the child is rendered
+      // inline via _buildChildrenSection (a plain PaneItemDestination, not a
+      // flyout MenuItemButton). The selection indicator is a PaneIndicator
+      // widget sitting in the same Stack as the label row.
+      //
+      // Anchor on the InkWell that wraps each item — it is a genuine ancestor
+      // of Text('Child') — then verify PaneIndicator is present within it.
+      final childTextFinder = find.text('Child');
+      expect(childTextFinder, findsOneWidget);
+
+      final inkWellFinder = find.ancestor(
+        of: childTextFinder,
+        matching: find.byType(InkWell),
+      );
+      // There may be multiple InkWells in the tree; at least one must be
+      // the item row that also contains the PaneIndicator.
+      expect(inkWellFinder, findsWidgets);
+
+      final indicatorFinder = find.descendant(
+        of: inkWellFinder,
+        matching: find.byType(PaneIndicator),
+      );
+      expect(indicatorFinder, findsWidgets);
+    });
   });
 }
