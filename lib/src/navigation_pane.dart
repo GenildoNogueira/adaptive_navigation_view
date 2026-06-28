@@ -156,7 +156,8 @@ class NavigationPane extends StatelessWidget {
       }
 
       final PaneItemDestination destinationData = itemDataWidget;
-      final bool hasChildren = destinationData.children != null &&
+      final bool hasChildren =
+          destinationData.children != null &&
           destinationData.children!.isNotEmpty;
 
       // This is the index the PaneItemDestination itself (parent or leaf) occupies in the flat list.
@@ -199,10 +200,12 @@ class NavigationPane extends StatelessWidget {
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterialLocalizations(context));
     final NavigationThemeData? paneTheme = NavigationTheme.of(context);
-    final NavigationViewController navigationViewC =
-        NavigationView.of(context).controller;
-    final _NavigationViewScope navigationViewScope =
-        _NavigationViewScope.of(context);
+    final NavigationViewController navigationViewC = NavigationView.of(
+      context,
+    ).controller;
+    final _NavigationViewScope navigationViewScope = _NavigationViewScope.of(
+      context,
+    );
     String? label = semanticLabel;
     switch (Theme.of(context).platform) {
       case TargetPlatform.iOS:
@@ -230,7 +233,7 @@ class NavigationPane extends StatelessWidget {
     // Calculate total flat slots first
     final int totalCalculatedSlots =
         _calculateTotalFlatSlotsRecursive(destinations) +
-            _calculateTotalFlatSlotsRecursive(footers ?? []);
+        _calculateTotalFlatSlotsRecursive(footers ?? []);
     int currentFlatIdx = 0;
 
     final List<Widget> wrappedChildren = _buildHierarchyRecursive(
@@ -270,13 +273,15 @@ class NavigationPane extends StatelessWidget {
               : null,
         ),
         child: Material(
-          color: backgroundColor ??
+          color:
+              backgroundColor ??
               paneTheme?.backgroundColor ??
               defaults.backgroundColor,
           elevation: elevation ?? paneTheme?.elevation ?? defaults.elevation!,
           shadowColor:
               shadowColor ?? paneTheme?.shadowColor ?? defaults.shadowColor,
-          surfaceTintColor: surfaceTintColor ??
+          surfaceTintColor:
+              surfaceTintColor ??
               paneTheme?.surfaceTintColor ??
               defaults.surfaceTintColor,
           shape: isDisplayModeMinimal ? effectiveMinimalShape : effectiveShape,
@@ -296,10 +301,7 @@ class NavigationPane extends StatelessWidget {
 }
 
 class _PaneControllerScope extends InheritedWidget {
-  const _PaneControllerScope({
-    required this.controller,
-    required super.child,
-  });
+  const _PaneControllerScope({required this.controller, required super.child});
 
   final PaneController controller;
 
@@ -684,7 +686,8 @@ class PaneControllerState extends State<PaneController>
   ColorTween _buildScrimColorTween() {
     return ColorTween(
       begin: Colors.transparent,
-      end: widget.scrimColor ??
+      end:
+          widget.scrimColor ??
           NavigationTheme.of(context)?.scrimColor ??
           Colors.black54,
     );
@@ -702,6 +705,21 @@ class PaneControllerState extends State<PaneController>
       PaneAlignment.start => AlignmentDirectional.centerEnd,
       PaneAlignment.end => AlignmentDirectional.centerStart,
     };
+  }
+
+  Offset get _slideBeginOffset {
+    if (isDisplayModeCompact || isDisplayModeExpanded) {
+      return Offset.zero;
+    }
+
+    final isStart = widget.alignment == PaneAlignment.start;
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+
+    if (isStart) {
+      return isRTL ? const Offset(1.0, 0.0) : const Offset(-1.0, 0.0);
+    } else {
+      return isRTL ? const Offset(-1.0, 0.0) : const Offset(1.0, 0.0);
+    }
   }
 
   Widget _buildPane(BuildContext context) {
@@ -722,14 +740,15 @@ class PaneControllerState extends State<PaneController>
     double? dragAreaWidth = widget.edgeDragWidth;
     if (widget.edgeDragWidth == null) {
       final EdgeInsets padding = MediaQuery.paddingOf(context);
-      dragAreaWidth = _kEdgeDragWidth +
+      dragAreaWidth =
+          _kEdgeDragWidth +
           (paneIsStart
               ? (textDirection == TextDirection.ltr
-                  ? padding.left
-                  : padding.right)
+                    ? padding.left
+                    : padding.right)
               : (textDirection == TextDirection.rtl
-                  ? padding.right
-                  : padding.left));
+                    ? padding.right
+                    : padding.left));
     }
 
     if (_animationController.status == AnimationStatus.dismissed &&
@@ -746,9 +765,7 @@ class PaneControllerState extends State<PaneController>
             behavior: HitTestBehavior.translucent,
             excludeFromSemantics: true,
             dragStartBehavior: widget.dragStartBehavior,
-            child: Container(
-              width: dragAreaWidth,
-            ),
+            child: Container(width: dragAreaWidth),
           ),
         );
       } else {
@@ -780,8 +797,9 @@ class PaneControllerState extends State<PaneController>
                     child: GestureDetector(
                       onTap: close,
                       child: Semantics(
-                        label: MaterialLocalizations.of(context)
-                            .modalBarrierDismissLabel,
+                        label: MaterialLocalizations.of(
+                          context,
+                        ).modalBarrierDismissLabel,
                         child: Container(
                           // The pane's "scrim"
                           color: _scrimColorTween.evaluate(
@@ -794,11 +812,11 @@ class PaneControllerState extends State<PaneController>
                 ),
               Align(
                 alignment: _paneOuterAlignment,
-                child: Align(
-                  alignment: _paneInnerAlignment,
-                  widthFactor: isDisplayModeCompact || isDisplayModeExpanded
-                      ? null
-                      : _animationController.value,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: _slideBeginOffset,
+                    end: Offset.zero,
+                  ).animate(_animationController),
                   child: RepaintBoundary(
                     child: FocusScope(
                       key: _paneKey,

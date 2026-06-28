@@ -3,13 +3,15 @@
 A Flutter package that provides a fully adaptive navigation view, inspired by the [Fluent Design Navigation View](https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview) and built on [Material 3](https://m3.material.io/) principles. The layout automatically adapts between **Minimal**, **Medium**, and **Expanded** display modes based on screen width.
 
 <p align="center">
-  <a href="#display-modes">Display Modes</a> •
   <a href="#installation">Installation</a> •
+  <a href="#display-modes">Display Modes</a> •
   <a href="#usage">Usage</a> •
   <a href="#navigation-controller">Navigation Controller</a> •
+  <a href="#hierarchical-destinations">Hierarchical Destinations</a> •
   <a href="#theming">Theming</a> •
   <a href="#keyboard-shortcuts">Keyboard Shortcuts</a> •
   <a href="#rtl-support">RTL Support</a> •
+  <a href="#migrating-from-v1">Migrating from v1</a> •
   <a href="#preview">Preview</a>
 </p>
 
@@ -21,44 +23,12 @@ A Flutter package that provides a fully adaptive navigation view, inspired by th
 - **Smooth Transitions** — Animated pane transitions between display modes, no abrupt layout jumps
 - **Index or Path Navigation** — Select destinations by position index or named path (compatible with GoRouter, Navigator 2.0, FlutterModular)
 - **Navigation History** — Full navigation history stack with `goBack()` support and duplicate-aware tracking
-- **Hierarchical Destinations** — Expandable parent destinations with collapsible children
+- **Hierarchical Destinations** — Expandable parent items with collapsible children. In Medium mode, children appear in a floating popup menu.
 - **Fully Themeable** — Fine-grained control over every visual aspect via `NavigationThemeData`
 - **RTL Support** — Full right-to-left language support
 - **Keyboard Shortcuts** — `Ctrl+B` / `Cmd+B` to toggle the pane, `Escape` to dismiss
 - **Drag Gesture** — Swipe to open/close the pane on mobile with fling support
 - **Resize Handle** — Drag the pane edge on desktop to resize
-
----
-
-## Display Modes
-
-The navigation pane switches between three modes based on available screen width:
-
-| Mode | Default Width | Behavior |
-|---|---|---|
-| **Minimal** | `< 600px` | Only a menu button is shown. The pane slides in as an overlay. |
-| **Medium** | `600px – 840px` | Icons only when closed. Opens to show icons + labels. |
-| **Expanded** | `> 840px` | Pane is always visible and fully expanded. |
-
-You can customize the breakpoints per-instance:
-
-```dart
-NavigationView(
-  compactBreakpoint: const WidthBreakpoint(end: 600),
-  mediumBreakpoint: const WidthBreakpoint(start: 600, end: 840),
-  expandedBreakpoint: const WidthBreakpoint(start: 840),
-  // ...
-)
-```
-
-Or force a specific mode regardless of screen width:
-
-```dart
-NavigationView(
-  preferredDisplayMode: DisplayMode.expanded,
-  // ...
-)
-```
 
 ---
 
@@ -91,6 +61,37 @@ Import in your Dart code:
 import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
 ```
 
+---
+
+## Display Modes
+
+The navigation pane switches between three modes based on available screen width:
+
+| Mode | Default Width | Behavior |
+|---|---|---|
+| **Minimal** | `< 600px` | Only a menu button is shown. The pane slides in as an overlay. |
+| **Medium** | `600px – 840px` | Icons only when closed. Opens to show icons + labels. |
+| **Expanded** | `> 840px` | Pane is always visible and fully expanded. |
+
+You can customize the breakpoints per-instance:
+
+```dart
+NavigationView(
+  compactBreakpoint: const WidthBreakpoint(end: 600),
+  mediumBreakpoint: const WidthBreakpoint(start: 600, end: 840),
+  expandedBreakpoint: const WidthBreakpoint(start: 840),
+  // ...
+)
+```
+
+Or force a specific mode regardless of screen width:
+
+```dart
+NavigationView(
+  preferredDisplayMode: DisplayMode.expanded,
+  // ...
+)
+```
 ---
 
 ## Usage
@@ -259,21 +260,9 @@ print(controller.isAnimating); // bool
 print(controller.offset);      // 0.0 to 1.0
 ```
 
-### Accessing the Controller from a Child Widget
-
-```dart
-// From anywhere in the subtree
-final state = NavigationView.of(context);
-state.openPane();
-state.closePane();
-
-// Or nullable version
-NavigationView.maybeOf(context)?.openPane();
-```
-
 ---
 
-## Hierarchical Destinations (Children)
+## Hierarchical Destinations
 
 Parent destinations with children are **not directly selectable** — tapping them expands or collapses their sub-items. Only leaf items (those without children) are navigable.
 
@@ -332,6 +321,20 @@ NavigationPane(
     ),
   ],
 )
+```
+
+---
+
+### Accessing the Controller from a Child Widget
+
+```dart
+// From anywhere in the subtree
+final state = NavigationView.of(context);
+state.openPane();
+state.closePane();
+
+// Or nullable version
+NavigationView.maybeOf(context)?.openPane();
 ```
 
 ---
@@ -413,6 +416,72 @@ MaterialApp(
   localizationsDelegates: GlobalMaterialLocalizations.delegates,
   home: NavigationView(/* ... */),
 )
+```
+
+---
+
+## Migrating from v1
+
+### Controller is now required
+
+In v1, navigation state was handled internally by `NavigationPane` via `selectedIndex` and `onDestinationSelected`. In v2, you must create and manage a `NavigationViewController` yourself and pass it to `NavigationView`.
+
+```dart
+// v1
+NavigationView(
+  pane: NavigationPane(
+    selectedIndex: _selectedIndex,
+    onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+    children: [ /* ... */ ],
+  ),
+)
+
+// v2
+NavigationView(
+  controller: _controller, // required
+  pane: NavigationPane(
+    destinations: [ /* ... */ ], // renamed from children
+  ),
+)
+```
+
+### Rename `PaneTheme` → `NavigationTheme`
+
+```dart
+// v1
+PaneTheme(
+  data: PaneThemeData(openWidth: 280),
+  child: NavigationView(/* ... */),
+)
+
+// v2
+NavigationTheme(
+  data: NavigationThemeData(openWidth: 280),
+  child: NavigationView(/* ... */),
+)
+```
+
+### `NavigationPane.children` renamed to `destinations`
+
+```dart
+// v1
+NavigationPane(children: [ PaneItemDestination(/* ... */) ])
+
+// v2
+NavigationPane(destinations: [ PaneItemDestination(/* ... */) ])
+```
+
+### Path-based navigation
+
+If you use GoRouter or any named-route system, you can now replace index tracking with path-based navigation entirely — no need to manually sync `_selectedIndex` with your router state:
+
+```dart
+final controller = NavigationViewController(
+  initialPath: '/home',
+  destinationType: DestinationTypes.byPath,
+  onDestinationPath: (path) => context.go(path!),
+  vsync: this,
+);
 ```
 
 ---

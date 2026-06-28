@@ -47,14 +47,14 @@ class WidthBreakpoint {
   final double? end;
 
   const WidthBreakpoint({this.start, this.end})
-      : assert(
-          (start != null || end != null),
-          'At least one of the parameters (start/end) must be provided.',
-        ),
-        assert(
-          (start == null || end == null) || (start <= end),
-          'Breakpoints must be sequential!',
-        );
+    : assert(
+        (start != null || end != null),
+        'At least one of the parameters (start/end) must be provided.',
+      ),
+      assert(
+        (start == null || end == null) || (start <= end),
+        'Breakpoints must be sequential!',
+      );
 
   // Construtor para breakpoints do tipo "start até infinito"
   const WidthBreakpoint.startFrom(double start) : this(start: start, end: null);
@@ -82,12 +82,7 @@ class WidthBreakpoint {
   int get hashCode => Object.hash(start, end);
 }
 
-enum _NavigationViewSlot {
-  body,
-  appBar,
-  navigationPane,
-  statusBar,
-}
+enum _NavigationViewSlot { body, appBar, navigationPane, statusBar }
 
 // Used to communicate the height of the Navigation's bottomNavigationBar and
 // persistentFooterButtons to the LayoutBuilder which builds the Navigation's body.
@@ -123,10 +118,10 @@ class _BodyBoxConstraints extends BoxConstraints {
 
   @override
   int get hashCode => Object.hash(
-        super.hashCode,
-        appBarHeight,
-        contentPaneWidth,
-      );
+    super.hashCode,
+    appBarHeight,
+    contentPaneWidth,
+  );
 }
 
 // Used when NavigationView.extendBody is true to wrap the NavigationView's body in a MediaQuery
@@ -136,9 +131,7 @@ class _BodyBoxConstraints extends BoxConstraints {
 // The bottom widgets' height is passed along via the _BodyBoxConstraints parameter.
 // The constraints parameter is constructed in_NavigationViewLayout.performLayout().
 class _BodyBuilder extends StatelessWidget {
-  const _BodyBuilder({
-    required this.body,
-  });
+  const _BodyBuilder({required this.body});
 
   final Widget body;
 
@@ -194,8 +187,9 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
     // in this case the app bar appears _after_ the body in the stacking order,
     // so the app bar's shadow is drawn on top of the body.
 
-    final BoxConstraints fullWidthConstraints =
-        looseConstraints.tighten(width: size.width);
+    final BoxConstraints fullWidthConstraints = looseConstraints.tighten(
+      width: size.width,
+    );
     final double height = size.height;
 
     final isDisplayModeMinimal = displayMode == DisplayMode.minimal;
@@ -214,8 +208,10 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         maxHeight: fullWidthConstraints.maxHeight,
       );
 
-      appBarHeight =
-          layoutChild(_NavigationViewSlot.appBar, appBarConstraints).height;
+      appBarHeight = layoutChild(
+        _NavigationViewSlot.appBar,
+        appBarConstraints,
+      ).height;
       contentTop = appBarHeight;
       positionChild(_NavigationViewSlot.appBar, Offset.zero);
     }
@@ -229,10 +225,7 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
         maxHeight: math.max(0.0, height - contentTop),
       );
       if (isDisplayModeMinimal) {
-        layoutChild(
-          _NavigationViewSlot.navigationPane,
-          paneConstraints,
-        );
+        layoutChild(_NavigationViewSlot.navigationPane, paneConstraints);
 
         positionChild(
           _NavigationViewSlot.navigationPane,
@@ -241,12 +234,9 @@ class _NavigationLayout extends MultiChildLayoutDelegate {
       } else {
         final double panePositionX = paneDirectionRTL
             ? size.width - paneWidth - offsetSafeAreaForPane
-            : offsetSafeAreaForPane;
+            : offsetSafeAreaForPane.clamp(0.0, size.width - paneWidth);
 
-        layoutChild(
-          _NavigationViewSlot.navigationPane,
-          paneConstraints,
-        );
+        layoutChild(_NavigationViewSlot.navigationPane, paneConstraints);
 
         positionChild(
           _NavigationViewSlot.navigationPane,
@@ -501,8 +491,8 @@ class NavigationView extends StatefulWidget {
   /// If there is no [NavigationView] in scope, then this will throw an exception.
   /// To return null if there is no [NavigationView], use [maybeOf] instead.
   static NavigationViewState of(BuildContext context) {
-    final NavigationViewState? result =
-        context.findAncestorStateOfType<NavigationViewState>();
+    final NavigationViewState? result = context
+        .findAncestorStateOfType<NavigationViewState>();
     if (result != null) {
       return result;
     }
@@ -660,7 +650,8 @@ class NavigationViewState extends State<NavigationView>
     final theme = NavigationTheme.of(context);
     final double openWidth =
         widget.openPaneWidth ?? theme?.openWidth ?? kOpenNavigationPaneWidth;
-    final double compactWidth = widget.compactPaneWidth ??
+    final double compactWidth =
+        widget.compactPaneWidth ??
         theme?.compactWidth ??
         kCompactNavigationPaneWidth;
     final double animationValue =
@@ -668,8 +659,11 @@ class NavigationViewState extends State<NavigationView>
 
     return switch (mode) {
       DisplayMode.minimal => animationValue * openWidth,
-      DisplayMode.medium =>
-        lerpDouble(compactWidth, openWidth, animationValue)!,
+      DisplayMode.medium => lerpDouble(
+        compactWidth,
+        openWidth,
+        animationValue,
+      )!,
       DisplayMode.expanded => openWidth,
     };
   }
@@ -727,7 +721,8 @@ class NavigationViewState extends State<NavigationView>
     );
 
     final double topPadding = MediaQuery.paddingOf(context).top;
-    _appBarMaxHeight = NavigationAppBar.preferredHeightFor(
+    _appBarMaxHeight =
+        NavigationAppBar.preferredHeightFor(
           context,
           widget.appBar.preferredSize,
         ) +
@@ -851,13 +846,14 @@ class NavigationViewState extends State<NavigationView>
           : 0.0,
     );
 
-    final EdgeInsets minViewPadding =
-        MediaQuery.viewPaddingOf(context).copyWith(
-      bottom: _resizeToAvoidBottomInset &&
-              MediaQuery.viewInsetsOf(context).bottom != 0.0
-          ? 0.0
-          : null,
-    );
+    final EdgeInsets minViewPadding = MediaQuery.viewPaddingOf(context)
+        .copyWith(
+          bottom:
+              _resizeToAvoidBottomInset &&
+                  MediaQuery.viewInsetsOf(context).bottom != 0.0
+              ? 0.0
+              : null,
+        );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -871,8 +867,6 @@ class NavigationViewState extends State<NavigationView>
           });
         }
 
-        final children = _buildStaticChildren(textDirection);
-
         return AnimatedBuilder(
           animation: Listenable.merge([
             controller.animation!,
@@ -880,6 +874,8 @@ class NavigationViewState extends State<NavigationView>
           ]),
           builder: (context, _) {
             final paneWidth = _getAnimatedPaneWidth();
+
+            final children = _buildStaticChildren(textDirection);
 
             return _NavigationViewScope(
               isPaneOpen: isPaneOpen,
@@ -921,7 +917,7 @@ class NavigationViewState extends State<NavigationView>
                             paneWidth: paneWidth,
                             paneActionMoveAnimationProgress:
                                 controller.animation?.value ??
-                                    (isPaneOpen ? 1.0 : 0.0),
+                                (isPaneOpen ? 1.0 : 0.0),
                           ),
                           children: children,
                         ),

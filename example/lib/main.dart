@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
 import 'package:go_router/go_router.dart';
@@ -24,8 +25,8 @@ class MainApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      locale: Locale('en', 'US'),
-      //locale: Locale('ar', 'DZ'),
+      //locale: Locale('en', 'US'),
+      locale: Locale('ar', 'DZ'),
       routerConfig: _router,
     );
   }
@@ -77,6 +78,15 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
   }
 
   @override
+  void didUpdateWidget(covariant MyApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final currentPath = widget.state.matchedLocation;
+    if (controller.selectedPath != currentPath) {
+      controller.selectDestinationByPath(currentPath);
+    }
+  }
+
+  @override
   void dispose() {
     super.dispose();
     controller.dispose();
@@ -84,63 +94,77 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationView(
-      controller: controller,
-      appBar: NavigationAppBar(
-        centerTitle: false,
-        titleSpacing: 10,
-        additionalLending: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 8.0),
-          child: _buildLeading(),
+    return PopScope(
+      // Impede o pop padrão do Android e delega ao controller
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (controller.canGoBack) {
+          controller.goBack();
+        } else {
+          // Nenhum histórico no controller: sai do app
+          SystemNavigator.pop();
+        }
+      },
+      child: NavigationView(
+        controller: controller,
+        appBar: NavigationAppBar(
+          centerTitle: false,
+          titleSpacing: 10,
+          additionalLending: Padding(
+            padding: const EdgeInsetsDirectional.only(start: 8.0),
+            child: _buildLeading(),
+          ),
+          title: const Text('Navigation View Example'),
         ),
-        title: const Text('Navigation View Example'),
-      ),
-      pane: NavigationPane(
-        footers: const [
-          PaneItemDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: Text('Settings'),
-            path: '/settings',
-          ),
-        ],
-        destinations: const [
-          PaneItemDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: Text('Home'),
-            path: '/',
-          ),
-          PaneItemDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: Text('Profile'),
-            path: '/profile',
-          ),
-          PaneItemDestination(
-            icon: Icon(Icons.folder_outlined),
-            label: Text('Documents'),
-            children: [
-              PaneItemDestination(
-                icon: Icon(Icons.description_outlined),
-                selectedIcon: Icon(Icons.description),
-                label: Text('Files'),
-                path: '/files',
-              ),
-              PaneItemDestination(
-                icon: Icon(Icons.image_outlined),
-                selectedIcon: Icon(Icons.image),
-                label: Text('Images'),
-                path: '/images',
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Card(
-        margin: EdgeInsets.zero,
-        elevation: 2,
-        child: widget.child!,
+        pane: NavigationPane(
+          footers: const [
+            PaneItemDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: Text('Settings'),
+              path: '/settings',
+            ),
+          ],
+          destinations: const [
+            PaneItemDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: Text('Home'),
+              path: '/',
+            ),
+            PaneItemDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: Text('Profile'),
+              path: '/profile',
+            ),
+            PaneItemDestination(
+              icon: Icon(Icons.folder_outlined),
+              label: Text('Documents'),
+              children: [
+                PaneItemDestination(
+                  icon: Icon(Icons.description_outlined),
+                  selectedIcon: Icon(Icons.description),
+                  label: Text('Files'),
+                  path: '/files',
+                ),
+                PaneItemDestination(
+                  icon: Icon(Icons.image_outlined),
+                  selectedIcon: Icon(Icons.image),
+                  label: Text('Images'),
+                  path: '/images',
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: Card(
+          margin: EdgeInsets.zero,
+          elevation: 2,
+          child: widget.child!,
+        ),
       ),
     );
   }

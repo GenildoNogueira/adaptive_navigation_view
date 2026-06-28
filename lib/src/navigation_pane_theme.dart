@@ -355,10 +355,14 @@ class NavigationThemeData with Diagnosticable {
       indicatorColor: Color.lerp(a?.indicatorColor, b?.indicatorColor, t),
       indicatorShape: ShapeBorder.lerp(a?.indicatorShape, b?.indicatorShape, t),
       indicatorSize: Size.lerp(a?.indicatorSize, b?.indicatorSize, t),
-      menuIndicatorSize:
-          Size.lerp(a?.menuIndicatorSize, b?.menuIndicatorSize, t),
-      menuIndicatorAlignment:
-          t < 0.5 ? a?.menuIndicatorAlignment : b?.menuIndicatorAlignment,
+      menuIndicatorSize: Size.lerp(
+        a?.menuIndicatorSize,
+        b?.menuIndicatorSize,
+        t,
+      ),
+      menuIndicatorAlignment: t < 0.5
+          ? a?.menuIndicatorAlignment
+          : b?.menuIndicatorAlignment,
       labelTextStyle: WidgetStateProperty.lerp<TextStyle?>(
         a?.labelTextStyle,
         b?.labelTextStyle,
@@ -412,11 +416,7 @@ class NavigationThemeData with Diagnosticable {
         b?.itemContentPadding,
         t,
       ),
-      itemMargin: EdgeInsetsGeometry.lerp(
-        a?.itemMargin,
-        b?.itemMargin,
-        t,
-      ),
+      itemMargin: EdgeInsetsGeometry.lerp(a?.itemMargin, b?.itemMargin, t),
       itemSpacing: lerpDouble(a?.itemSpacing, b?.itemSpacing, t),
       itemIconSize: WidgetStateProperty.lerp<double?>(
         a?.itemIconSize,
@@ -425,20 +425,32 @@ class NavigationThemeData with Diagnosticable {
         lerpDouble,
       ),
       itemIconColor: Color.lerp(a?.itemIconColor, b?.itemIconColor, t),
-      itemSelectedIconColor:
-          Color.lerp(a?.itemSelectedIconColor, b?.itemSelectedIconColor, t),
-      itemHoverIconColor:
-          Color.lerp(a?.itemHoverIconColor, b?.itemHoverIconColor, t),
-      itemDisabledIconColor:
-          Color.lerp(a?.itemDisabledIconColor, b?.itemDisabledIconColor, t),
+      itemSelectedIconColor: Color.lerp(
+        a?.itemSelectedIconColor,
+        b?.itemSelectedIconColor,
+        t,
+      ),
+      itemHoverIconColor: Color.lerp(
+        a?.itemHoverIconColor,
+        b?.itemHoverIconColor,
+        t,
+      ),
+      itemDisabledIconColor: Color.lerp(
+        a?.itemDisabledIconColor,
+        b?.itemDisabledIconColor,
+        t,
+      ),
       itemLabelStyle: TextStyle.lerp(a?.itemLabelStyle, b?.itemLabelStyle, t),
       itemSelectedLabelStyle: TextStyle.lerp(
         a?.itemSelectedLabelStyle,
         b?.itemSelectedLabelStyle,
         t,
       ),
-      itemHoverLabelStyle:
-          TextStyle.lerp(a?.itemHoverLabelStyle, b?.itemHoverLabelStyle, t),
+      itemHoverLabelStyle: TextStyle.lerp(
+        a?.itemHoverLabelStyle,
+        b?.itemHoverLabelStyle,
+        t,
+      ),
       itemDisabledLabelStyle: TextStyle.lerp(
         a?.itemDisabledLabelStyle,
         b?.itemDisabledLabelStyle,
@@ -446,21 +458,32 @@ class NavigationThemeData with Diagnosticable {
       ),
       itemChevronSize: lerpDouble(a?.itemChevronSize, b?.itemChevronSize, t),
       itemChevronColor: Color.lerp(a?.itemChevronColor, b?.itemChevronColor, t),
-      itemChevronHoverColor:
-          Color.lerp(a?.itemChevronHoverColor, b?.itemChevronHoverColor, t),
+      itemChevronHoverColor: Color.lerp(
+        a?.itemChevronHoverColor,
+        b?.itemChevronHoverColor,
+        t,
+      ),
       itemSelectedChevronColor: Color.lerp(
         a?.itemSelectedChevronColor,
         b?.itemSelectedChevronColor,
         t,
       ),
-      itemChildrenIndent:
-          lerpDouble(a?.itemChildrenIndent, b?.itemChildrenIndent, t),
-      itemChildrenSpacing:
-          lerpDouble(a?.itemChildrenSpacing, b?.itemChildrenSpacing, t),
-      itemAnimationDuration:
-          t < 0.5 ? a?.itemAnimationDuration : b?.itemAnimationDuration,
-      itemAnimationCurve:
-          t < 0.5 ? a?.itemAnimationCurve : b?.itemAnimationCurve,
+      itemChildrenIndent: lerpDouble(
+        a?.itemChildrenIndent,
+        b?.itemChildrenIndent,
+        t,
+      ),
+      itemChildrenSpacing: lerpDouble(
+        a?.itemChildrenSpacing,
+        b?.itemChildrenSpacing,
+        t,
+      ),
+      itemAnimationDuration: t < 0.5
+          ? a?.itemAnimationDuration
+          : b?.itemAnimationDuration,
+      itemAnimationCurve: t < 0.5
+          ? a?.itemAnimationCurve
+          : b?.itemAnimationCurve,
       itemElevation: WidgetStateProperty.lerp<double?>(
         a?.itemElevation,
         b?.itemElevation,
@@ -478,53 +501,53 @@ class NavigationThemeData with Diagnosticable {
 
   @override
   int get hashCode => Object.hashAll([
-        backgroundColor,
-        scrimColor,
-        elevation,
-        shadowColor,
-        surfaceTintColor,
-        dividerColor,
-        shape,
-        minimalShape,
-        indicatorColor,
-        indicatorShape,
-        indicatorSize,
-        menuIndicatorSize,
-        menuIndicatorAlignment,
-        labelTextStyle,
-        iconTheme,
-        contentPadding,
-        compactWidth,
-        openWidth,
-        itemSize,
-        itemBackgroundColor,
-        itemSelectedBackgroundColor,
-        itemHoverBackgroundColor,
-        itemPressedBackgroundColor,
-        itemShape,
-        itemContentPadding,
-        itemMargin,
-        itemSpacing,
-        itemIconSize,
-        itemIconColor,
-        itemSelectedIconColor,
-        itemHoverIconColor,
-        itemDisabledIconColor,
-        itemLabelStyle,
-        itemSelectedLabelStyle,
-        itemHoverLabelStyle,
-        itemDisabledLabelStyle,
-        itemChevronSize,
-        itemChevronColor,
-        itemChevronHoverColor,
-        itemSelectedChevronColor,
-        itemChildrenIndent,
-        itemChildrenSpacing,
-        itemAnimationDuration,
-        itemAnimationCurve,
-        itemElevation,
-        itemShadowColor,
-      ]);
+    backgroundColor,
+    scrimColor,
+    elevation,
+    shadowColor,
+    surfaceTintColor,
+    dividerColor,
+    shape,
+    minimalShape,
+    indicatorColor,
+    indicatorShape,
+    indicatorSize,
+    menuIndicatorSize,
+    menuIndicatorAlignment,
+    labelTextStyle,
+    iconTheme,
+    contentPadding,
+    compactWidth,
+    openWidth,
+    itemSize,
+    itemBackgroundColor,
+    itemSelectedBackgroundColor,
+    itemHoverBackgroundColor,
+    itemPressedBackgroundColor,
+    itemShape,
+    itemContentPadding,
+    itemMargin,
+    itemSpacing,
+    itemIconSize,
+    itemIconColor,
+    itemSelectedIconColor,
+    itemHoverIconColor,
+    itemDisabledIconColor,
+    itemLabelStyle,
+    itemSelectedLabelStyle,
+    itemHoverLabelStyle,
+    itemDisabledLabelStyle,
+    itemChevronSize,
+    itemChevronColor,
+    itemChevronHoverColor,
+    itemSelectedChevronColor,
+    itemChildrenIndent,
+    itemChildrenSpacing,
+    itemAnimationDuration,
+    itemAnimationCurve,
+    itemElevation,
+    itemShadowColor,
+  ]);
 
   @override
   bool operator ==(Object other) {
@@ -591,14 +614,11 @@ class NavigationThemeData with Diagnosticable {
     );
     properties.add(ColorProperty('scrimColor', scrimColor, defaultValue: null));
     properties.add(DoubleProperty('elevation', elevation, defaultValue: null));
-    properties
-        .add(ColorProperty('shadowColor', shadowColor, defaultValue: null));
     properties.add(
-      ColorProperty(
-        'surfaceTintColor',
-        surfaceTintColor,
-        defaultValue: null,
-      ),
+      ColorProperty('shadowColor', shadowColor, defaultValue: null),
+    );
+    properties.add(
+      ColorProperty('surfaceTintColor', surfaceTintColor, defaultValue: null),
     );
     properties.add(
       DiagnosticsProperty<ShapeBorder>('shape', shape, defaultValue: null),
@@ -658,9 +678,7 @@ class NavigationThemeData with Diagnosticable {
     properties.add(
       DoubleProperty('compactWidth', compactWidth, defaultValue: null),
     );
-    properties.add(
-      DoubleProperty('openWidth', openWidth, defaultValue: null),
-    );
+    properties.add(DoubleProperty('openWidth', openWidth, defaultValue: null));
     properties.add(
       DiagnosticsProperty<WidgetStateProperty<Color?>>(
         'itemBackgroundColor',
@@ -847,19 +865,15 @@ class NavigationThemeData with Diagnosticable {
 class NavigationTheme extends InheritedTheme {
   /// Creates a theme that defines the [NavigationThemeData] properties for a
   /// [Pane].
-  const NavigationTheme({
-    super.key,
-    required this.data,
-    required super.child,
-  });
+  const NavigationTheme({super.key, required this.data, required super.child});
 
   /// Specifies the background color, scrim color, elevation, and shape for
   /// descendant [NavigationPane] widgets.
   final NavigationThemeData data;
 
   static NavigationThemeData? of(BuildContext context) {
-    final NavigationTheme? paneTheme =
-        context.dependOnInheritedWidgetOfExactType<NavigationTheme>();
+    final NavigationTheme? paneTheme = context
+        .dependOnInheritedWidgetOfExactType<NavigationTheme>();
     return paneTheme?.data;
   }
 
@@ -873,13 +887,9 @@ class NavigationTheme extends InheritedTheme {
 }
 
 class _NavigationDefaults extends NavigationThemeData {
-  _NavigationDefaults(this.context)
-      : super(
-          elevation: 0.0,
-        );
+  _NavigationDefaults(this.context) : super(elevation: 0.0);
 
   final BuildContext context;
-  late final TextDirection direction = Directionality.of(context);
   late final ThemeData _theme = Theme.of(context);
   late final ColorScheme _colors = _theme.colorScheme;
   late final TextTheme _textTheme = _theme.textTheme;
@@ -892,11 +902,14 @@ class _NavigationDefaults extends NavigationThemeData {
   // There isn't currently a token for this value, but it is shown in the spec,
   // so hard coding here for now.
   @override
-  ShapeBorder? get minimalShape => RoundedRectangleBorder(
-        borderRadius: const BorderRadiusDirectional.horizontal(
-          end: Radius.circular(8.0),
-        ).resolve(direction),
-      );
+  ShapeBorder? get minimalShape {
+    final direction = Directionality.of(context);
+    return RoundedRectangleBorder(
+      borderRadius: const BorderRadiusDirectional.horizontal(
+        end: Radius.circular(8.0),
+      ).resolve(direction),
+    );
+  }
 
   @override
   Color? get indicatorColor => _colors.secondaryContainer;
@@ -965,8 +978,8 @@ class _NavigationDefaults extends NavigationThemeData {
           color: states.contains(WidgetState.disabled)
               ? _colors.onSurfaceVariant.withAlpha(96)
               : states.contains(WidgetState.selected)
-                  ? _colors.onSecondaryContainer
-                  : _colors.onSurfaceVariant,
+              ? _colors.onSecondaryContainer
+              : _colors.onSurfaceVariant,
         );
       });
 
@@ -978,8 +991,8 @@ class _NavigationDefaults extends NavigationThemeData {
           color: states.contains(WidgetState.disabled)
               ? _colors.onSurfaceVariant.withAlpha(96)
               : states.contains(WidgetState.selected)
-                  ? _colors.onSecondaryContainer
-                  : _colors.onSurfaceVariant,
+              ? _colors.onSecondaryContainer
+              : _colors.onSurfaceVariant,
           overflow: TextOverflow.ellipsis,
         );
       });

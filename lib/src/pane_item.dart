@@ -80,16 +80,12 @@ class PaneItemDestination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PaneItemBuilder(
-      destination: this,
-    );
+    return _PaneItemBuilder(destination: this);
   }
 }
 
 class _PaneItemBuilder extends StatefulWidget {
-  const _PaneItemBuilder({
-    required this.destination,
-  });
+  const _PaneItemBuilder({required this.destination});
 
   final PaneItemDestination destination;
 
@@ -132,10 +128,12 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
 
     final theme = NavigationTheme.of(context);
     final defaults = _NavigationDefaults(context);
-    final animationDuration = theme?.itemAnimationDuration ??
+    final animationDuration =
+        theme?.itemAnimationDuration ??
         defaults.itemAnimationDuration ??
         const Duration(milliseconds: 200);
-    final animationCurve = theme?.itemAnimationCurve ??
+    final animationCurve =
+        theme?.itemAnimationCurve ??
         defaults.itemAnimationCurve ??
         Curves.easeInOut;
 
@@ -154,10 +152,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       _selectionController.value = 1.0;
     }
 
-    _rotationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 0.25,
-    ).animate(
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.25).animate(
       CurvedAnimation(
         parent: _expansionController,
         curve: animationCurve,
@@ -220,7 +215,8 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     final bool paneWasClosed = _wasPaneOpen == true && !currentPaneOpen;
 
     // Check if display mode changed from expanded/medium to a more compact state
-    final bool displayModeCollapsed = _previousDisplayMode != null &&
+    final bool displayModeCollapsed =
+        _previousDisplayMode != null &&
         (_previousDisplayMode == DisplayMode.expanded ||
             _previousDisplayMode == DisplayMode.medium) &&
         (currentDisplayMode == DisplayMode.minimal ||
@@ -286,7 +282,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       final navigationScope = _NavigationViewScope.of(context);
       final bool isCompactClosed =
           navigationScope.displayMode == DisplayMode.medium &&
-              !navigationScope.isPaneOpen;
+          !navigationScope.isPaneOpen;
 
       if (isCompactClosed) {
         // In compact mode with pane closed, use MenuAnchor
@@ -360,29 +356,39 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     final states = _getWidgetStates();
 
     final textDirection = Directionality.of(context);
-    final itemMargin = theme?.itemMargin?.resolve(textDirection) ??
+    final isRTL = textDirection == TextDirection.rtl;
+    final resolvedAlignment = isRTL
+        ? Alignment.centerRight
+        : Alignment.centerLeft;
+
+    final itemMargin =
+        theme?.itemMargin?.resolve(textDirection) ??
         defaults.itemMargin?.resolve(textDirection);
     final itemContentPadding =
         theme?.itemContentPadding?.resolve(textDirection) ??
-            defaults.itemContentPadding;
+        defaults.itemContentPadding;
     final itemSize = theme?.itemSize ?? defaults.itemSize;
-    final itemShape = theme?.itemShape?.resolve(states) ??
+    final itemShape =
+        theme?.itemShape?.resolve(states) ??
         defaults.itemShape?.resolve(states);
     final itemBackgroundColor = _isSelected
         ? (theme?.itemSelectedBackgroundColor ??
-            theme?.itemBackgroundColor?.resolve(states) ??
-            defaults.itemSelectedBackgroundColor ??
-            defaults.itemBackgroundColor?.resolve(states))
+              theme?.itemBackgroundColor?.resolve(states) ??
+              defaults.itemSelectedBackgroundColor ??
+              defaults.itemBackgroundColor?.resolve(states))
         : (theme?.itemBackgroundColor?.resolve(states) ??
-            defaults.itemBackgroundColor?.resolve(states));
-    final itemElevation = theme?.itemElevation?.resolve(states) ??
+              defaults.itemBackgroundColor?.resolve(states));
+    final itemElevation =
+        theme?.itemElevation?.resolve(states) ??
         defaults.itemElevation?.resolve(states);
-    final itemShadowColor = theme?.itemShadowColor?.resolve(states) ??
+    final itemShadowColor =
+        theme?.itemShadowColor?.resolve(states) ??
         defaults.itemShadowColor?.resolve(states);
     final indicatorShape = theme?.indicatorShape ?? defaults.indicatorShape;
     final Color? hoverColor =
         theme?.itemHoverBackgroundColor ?? defaults.itemHoverBackgroundColor;
-    final pressedColor = theme?.itemPressedBackgroundColor ??
+    final pressedColor =
+        theme?.itemPressedBackgroundColor ??
         defaults.itemPressedBackgroundColor;
 
     return Column(
@@ -406,23 +412,27 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
                     hoverColor: hoverColor,
                     highlightColor: pressedColor,
                     child: Stack(
-                      alignment: AlignmentDirectional.centerStart,
+                      alignment: resolvedAlignment,
                       children: [
                         AnimatedBuilder(
                           animation: _selectionAnimation,
                           builder: (context, child) {
                             return PaneIndicator(
                               animation: _selectionAnimation,
-                              color: theme?.indicatorColor ??
+                              color:
+                                  theme?.indicatorColor ??
                                   defaults.indicatorColor!,
-                              shape: theme?.indicatorShape ??
+                              shape:
+                                  theme?.indicatorShape ??
                                   defaults.indicatorShape!,
-                              width: (theme?.indicatorSize ??
-                                      defaults.indicatorSize!)
-                                  .width,
-                              height: (theme?.indicatorSize ??
-                                      defaults.indicatorSize!)
-                                  .height,
+                              width:
+                                  (theme?.indicatorSize ??
+                                          defaults.indicatorSize!)
+                                      .width,
+                              height:
+                                  (theme?.indicatorSize ??
+                                          defaults.indicatorSize!)
+                                      .height,
                             );
                           },
                         ),
@@ -448,28 +458,32 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     DisplayMode displayMode,
     bool isPaneOpen,
     double paneActionProgress,
-  ) =>
-      switch (displayMode) {
-        DisplayMode.expanded => true,
-        DisplayMode.minimal ||
-        DisplayMode.medium =>
-          isPaneOpen && paneActionProgress > 0.5,
-      };
+  ) => switch (displayMode) {
+    DisplayMode.expanded => true,
+    DisplayMode.minimal ||
+    DisplayMode.medium => isPaneOpen && paneActionProgress > 0.5,
+  };
 
   static const Map<ShortcutActivator, Intent> _shortcuts =
       <ShortcutActivator, Intent>{
-    SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-    SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
-    SingleActivator(LogicalKeyboardKey.arrowDown):
-        DirectionalFocusIntent(TraversalDirection.down),
-    SingleActivator(LogicalKeyboardKey.arrowUp):
-        DirectionalFocusIntent(TraversalDirection.up),
-  };
+        SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(
+          TraversalDirection.down,
+        ),
+        SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
+          TraversalDirection.up,
+        ),
+      };
 
   Widget _buildContent(BuildContext context) {
     final navigationScope = _NavigationViewScope.of(context);
     final theme = NavigationTheme.of(context);
     final defaults = _NavigationDefaults(context);
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final resolvedAlignment = isRTL
+        ? Alignment.centerRight
+        : Alignment.centerLeft;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -513,7 +527,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
         if (!hasEnoughWidth) {
           rowContent = ClipRect(
             child: OverflowBox(
-              alignment: AlignmentDirectional.centerStart,
+              alignment: resolvedAlignment,
               minWidth: 0.0,
               maxWidth: double.infinity,
               child: rowContent,
@@ -521,15 +535,12 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
           );
         }
 
-        final content = Focus(
-          focusNode: focusNode,
-          child: rowContent,
-        );
+        final content = Focus(focusNode: focusNode, child: rowContent);
 
         if (widget.destination.hasChildren) {
           final bool isCompactClosed =
               navigationScope.displayMode == DisplayMode.medium &&
-                  !navigationScope.isPaneOpen;
+              !navigationScope.isPaneOpen;
 
           if (isCompactClosed) {
             final textDirection = Directionality.of(context);
@@ -547,40 +558,51 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
                 final materialTheme = Theme.of(context);
                 final menuTheme = MenuTheme.of(context);
 
-                final overlayColor = menuTheme.style?.backgroundColor
-                        ?.resolve(<WidgetState>{}) ??
+                final overlayColor =
+                    menuTheme.style?.backgroundColor?.resolve(
+                      <WidgetState>{},
+                    ) ??
                     materialTheme.colorScheme.surfaceContainer;
 
                 final overlayShadowColor =
                     menuTheme.style?.shadowColor?.resolve(<WidgetState>{}) ??
-                        materialTheme.colorScheme.shadow;
+                    materialTheme.colorScheme.shadow;
 
                 final overlayElevation =
                     menuTheme.style?.elevation?.resolve(<WidgetState>{}) ?? 3.0;
 
-                final overlayShape = menuTheme.style?.shape
-                        ?.resolve(<WidgetState>{}) as RoundedRectangleBorder? ??
+                final overlayShape =
+                    menuTheme.style?.shape?.resolve(<WidgetState>{})
+                        as RoundedRectangleBorder? ??
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     );
 
                 final overlayPadding =
                     menuTheme.style?.padding?.resolve(<WidgetState>{}) ??
-                        const EdgeInsets.symmetric(vertical: 4);
+                    const EdgeInsets.symmetric(vertical: 4);
 
                 // Resolve anchor position with RTL support and basic
                 // viewport clamping to avoid overflow off-screen.
                 final screenSize = MediaQuery.sizeOf(context);
                 const double menuMinWidth = 168.0;
 
-                double left;
+                double? leftPos;
+                double? rightPos;
+
                 if (textDirection == TextDirection.rtl) {
-                  left = info.anchorRect.left - menuMinWidth;
-                  if (left < 0) left = info.anchorRect.right;
+                  rightPos = screenSize.width - info.anchorRect.left;
+
+                  if (info.anchorRect.left < menuMinWidth) {
+                    rightPos = null;
+                    leftPos = info.anchorRect.right;
+                  }
                 } else {
-                  left = info.anchorRect.right;
-                  if (left + menuMinWidth > screenSize.width) {
-                    left = info.anchorRect.left - menuMinWidth;
+                  leftPos = info.anchorRect.right;
+
+                  if (leftPos + menuMinWidth > screenSize.width) {
+                    leftPos = null;
+                    rightPos = screenSize.width - info.anchorRect.left;
                   }
                 }
 
@@ -591,7 +613,8 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
 
                 return Positioned(
                   top: top,
-                  left: left,
+                  left: leftPos,
+                  right: rightPos,
                   child: Semantics(
                     scopesRoute: true,
                     explicitChildNodes: true,
@@ -667,15 +690,20 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
       }
 
       final bool isChildSelected = _isChildSelected(child, childFlatIndex);
-      final Set<WidgetState> states =
-          isChildSelected ? {WidgetState.selected} : <WidgetState>{};
+      final Set<WidgetState> states = isChildSelected
+          ? {WidgetState.selected}
+          : <WidgetState>{};
+
+      final resolvedIndicatorColor =
+          theme?.indicatorColor ?? navDefaults.indicatorColor;
 
       final TextStyle resolvedTextStyle =
           (theme?.labelTextStyle?.resolve(states) ??
-              navDefaults.labelTextStyle!.resolve(states))!;
+          navDefaults.labelTextStyle!.resolve(states))!;
 
-      final OutlinedBorder indicatorShape = (theme?.indicatorShape ??
-          navDefaults.indicatorShape)! as OutlinedBorder;
+      final OutlinedBorder indicatorShape =
+          (theme?.indicatorShape ?? navDefaults.indicatorShape)!
+              as OutlinedBorder;
 
       final ButtonStyle localStyle = ButtonStyle(
         overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
@@ -696,7 +724,9 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
               EdgeInsets.zero,
         ),
         shape: WidgetStatePropertyAll(indicatorShape),
-        backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+        backgroundColor: WidgetStatePropertyAll(
+          isChildSelected ? resolvedIndicatorColor : Colors.transparent,
+        ),
         foregroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.disabled)) {
             return materialTheme.colorScheme.onSurface.withValues(alpha: 0.38);
@@ -727,11 +757,13 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
               : null,
           child: Builder(
             builder: (context) {
-              final resolvedIndicatorSize = theme?.menuIndicatorSize ??
+              final resolvedIndicatorSize =
+                  theme?.menuIndicatorSize ??
                   navDefaults.menuIndicatorSize ??
                   (theme?.indicatorSize ?? navDefaults.indicatorSize!);
 
-              final resolvedAlignment = theme?.menuIndicatorAlignment ??
+              final resolvedAlignment =
+                  theme?.menuIndicatorAlignment ??
                   navDefaults.menuIndicatorAlignment ??
                   AlignmentDirectional.center;
 
@@ -753,21 +785,25 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
                               : resolvedIndicatorSize.width,
                           height:
                               resolvedIndicatorSize.height == double.infinity
-                                  ? null
-                                  : resolvedIndicatorSize.height,
+                              ? null
+                              : resolvedIndicatorSize.height,
                           child: AnimatedOpacity(
                             opacity: isChildSelected ? 1.0 : 0.0,
-                            duration: theme?.itemAnimationDuration ??
+                            duration:
+                                theme?.itemAnimationDuration ??
                                 navDefaults.itemAnimationDuration ??
                                 const Duration(milliseconds: 200),
-                            curve: theme?.itemAnimationCurve ??
+                            curve:
+                                theme?.itemAnimationCurve ??
                                 navDefaults.itemAnimationCurve ??
                                 Curves.easeInOut,
                             child: DecoratedBox(
                               decoration: ShapeDecoration(
-                                color: theme?.indicatorColor ??
+                                color:
+                                    theme?.indicatorColor ??
                                     navDefaults.indicatorColor!,
-                                shape: (theme?.indicatorShape ??
+                                shape:
+                                    (theme?.indicatorShape ??
                                     navDefaults.indicatorShape!),
                               ),
                             ),
@@ -859,15 +895,18 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
 
     // Fallback to default theme if no custom theme properties are set
     final iconTheme = IconThemeData(
-      color: iconColor ??
+      color:
+          iconColor ??
           (theme?.iconTheme?.resolve(states)?.color ??
               defaults.iconTheme!.resolve(states)!.color),
-      size: iconSize ??
+      size:
+          iconSize ??
           (theme?.iconTheme?.resolve(states)?.size ??
               defaults.iconTheme!.resolve(states)!.size),
     );
-    final resolveIcon =
-        isSelected && selectedIcon != null ? selectedIcon : icon;
+    final resolveIcon = isSelected && selectedIcon != null
+        ? selectedIcon
+        : icon;
 
     return AnimatedBuilder(
       animation: _selectionAnimation,
@@ -900,11 +939,13 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     }
 
     // Fallback to default theme if no custom style is set
-    final textStyle = labelStyle ??
+    final textStyle =
+        labelStyle ??
         (theme?.labelTextStyle?.resolve(states) ??
             defaults.labelTextStyle!.resolve(states)!);
 
-    final animationDuration = theme?.itemAnimationDuration ??
+    final animationDuration =
+        theme?.itemAnimationDuration ??
         defaults.itemAnimationDuration ??
         const Duration(milliseconds: 100);
 
@@ -925,6 +966,7 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
   ) {
     final theme = NavigationTheme.of(context);
     final defaults = _NavigationDefaults(context);
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     // Get chevron properties from theme
     Color? chevronColor;
@@ -941,10 +983,12 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
     return AnimatedBuilder(
       animation: _rotationAnimation,
       builder: (context, child) {
+        final angle =
+            _rotationAnimation.value * 2 * math.pi * (isRTL ? -1.0 : 1.0);
         return Transform.rotate(
-          angle: _rotationAnimation.value * 2 * math.pi,
+          angle: angle,
           child: Icon(
-            Icons.keyboard_arrow_right,
+            isRTL ? Icons.keyboard_arrow_left : Icons.keyboard_arrow_right,
             size: chevronSize,
             color: chevronColor,
           ),
@@ -962,7 +1006,8 @@ class _PaneItemBuilderState extends State<_PaneItemBuilder>
         theme?.itemChildrenIndent ?? defaults.itemChildrenIndent ?? 16.0;
     final childrenSpacing =
         theme?.itemChildrenSpacing ?? defaults.itemChildrenSpacing ?? 0.0;
-    final animationCurve = theme?.itemAnimationCurve ??
+    final animationCurve =
+        theme?.itemAnimationCurve ??
         defaults.itemAnimationCurve ??
         Curves.easeInOut;
 
@@ -1070,11 +1115,7 @@ class PaneIndicator extends StatelessWidget {
 }
 
 class _PaneDestinationInfo extends InheritedWidget {
-  const _PaneDestinationInfo({
-    this.index,
-    this.path,
-    required super.child,
-  });
+  const _PaneDestinationInfo({this.index, this.path, required super.child});
 
   final int? index;
   final String? path;
