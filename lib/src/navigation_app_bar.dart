@@ -222,36 +222,42 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
     final IconButtonThemeData iconButtonTheme = IconButtonTheme.of(context);
     final appBarTheme = AppBarTheme.of(context);
     final defaults = _getDefaults(context);
-    final _NavigationViewScope navigationViewScope =
-        _NavigationViewScope.of(context);
+    final _NavigationViewScope navigationViewScope = _NavigationViewScope.of(
+      context,
+    );
 
     final bool isDisplayModeOpen =
         navigationViewScope.displayMode == DisplayMode.expanded;
 
-    final TextStyle? titleTextStyle = widget.titleTextStyle ??
+    final TextStyle? titleTextStyle =
+        widget.titleTextStyle ??
         appBarTheme.titleTextStyle ??
         defaults.titleTextStyle;
 
     final backgroundColor = widget.backgroundColor ?? theme.colorScheme.surface;
 
-    final Color foregroundColor = widget.foregroundColor ??
+    final Color foregroundColor =
+        widget.foregroundColor ??
         appBarTheme.foregroundColor ??
         defaults.foregroundColor!;
 
-    final IconThemeData overallIconTheme = widget.iconTheme ??
+    final IconThemeData overallIconTheme =
+        widget.iconTheme ??
         appBarTheme.iconTheme ??
         defaults.iconTheme!.copyWith(color: foregroundColor);
 
     final Color? actionForegroundColor =
         widget.foregroundColor ?? appBarTheme.foregroundColor;
-    final IconThemeData actionsIconTheme = widget.actionsIconTheme ??
+    final IconThemeData actionsIconTheme =
+        widget.actionsIconTheme ??
         appBarTheme.actionsIconTheme ??
         widget.iconTheme ??
         appBarTheme.iconTheme ??
         defaults.actionsIconTheme?.copyWith(color: actionForegroundColor) ??
         overallIconTheme;
 
-    final double appBarHeight = widget.appBarHeight ??
+    final double appBarHeight =
+        widget.appBarHeight ??
         appBarTheme.toolbarHeight ??
         _kDefaultAppBarHeight;
 
@@ -262,8 +268,7 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
           TargetPlatform.android ||
           TargetPlatform.fuchsia ||
           TargetPlatform.linux ||
-          TargetPlatform.windows =>
-            true,
+          TargetPlatform.windows => true,
           TargetPlatform.iOS || TargetPlatform.macOS => null,
         },
         header: true,
@@ -333,7 +338,8 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
       middle: title,
       trailing: actions,
       centerMiddle: widget._getEffectiveCenterTitle(theme),
-      middleSpacing: widget.titleSpacing ??
+      middleSpacing:
+          widget.titleSpacing ??
           appBarTheme.titleSpacing ??
           NavigationToolbar.kMiddleSpacing,
     );
@@ -351,7 +357,8 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
       ),
     );
 
-    final SystemUiOverlayStyle overlayStyle = appBarTheme.systemOverlayStyle ??
+    final SystemUiOverlayStyle overlayStyle =
+        appBarTheme.systemOverlayStyle ??
         defaults.systemOverlayStyle ??
         _systemOverlayStyleForBrightness(
           ThemeData.estimateBrightnessForColor(backgroundColor),
@@ -427,7 +434,7 @@ class _ToolbarContainerLayout extends SingleChildLayoutDelegate {
 
 class _PreferredAppBarSize extends Size {
   _PreferredAppBarSize(this.appBarHeight)
-      : super.fromHeight((appBarHeight ?? _kDefaultAppBarHeight));
+    : super.fromHeight((appBarHeight ?? _kDefaultAppBarHeight));
 
   final double? appBarHeight;
 }
@@ -523,12 +530,12 @@ abstract class _ActionButton extends StatelessWidget {
 
 class _AppBarDefaults extends AppBarTheme {
   _AppBarDefaults(this.context)
-      : super(
-          elevation: 0.0,
-          scrolledUnderElevation: 3.0,
-          titleSpacing: NavigationToolbar.kMiddleSpacing,
-          toolbarHeight: 64.0,
-        );
+    : super(
+        elevation: 0.0,
+        scrolledUnderElevation: 3.0,
+        titleSpacing: NavigationToolbar.kMiddleSpacing,
+        toolbarHeight: 64.0,
+      );
 
   final BuildContext context;
   late final ThemeData _theme = Theme.of(context);
@@ -549,15 +556,15 @@ class _AppBarDefaults extends AppBarTheme {
 
   @override
   IconThemeData? get iconTheme => IconThemeData(
-        color: _colors.onSurface,
-        size: 24.0,
-      );
+    color: _colors.onSurface,
+    size: 24.0,
+  );
 
   @override
   IconThemeData? get actionsIconTheme => IconThemeData(
-        color: _colors.onSurfaceVariant,
-        size: 24.0,
-      );
+    color: _colors.onSurfaceVariant,
+    size: 24.0,
+  );
 
   @override
   TextStyle? get toolbarTextStyle => _textTheme.bodyMedium;
