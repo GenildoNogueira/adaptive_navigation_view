@@ -341,6 +341,11 @@ NavigationView.maybeOf(context)?.openPane();
 
 ## Theming
 
+To ensure that `adaptive_navigation_view` perfectly follows your application's theme colors, text styles, and brightness (light/dark mode) without forcing a strict Material dependency:
+
+1. **Wrap your view with `NavigationTheme`**: Pass a `NavigationThemeData` customized to match your brand or design system colors.
+2. **Handle Brightness and Text Color**: The components automatically evaluate luminance based on the resolved `backgroundColor` or ambient text styles, but you can explicitly define text styles and icon themes:
+
 Apply a theme to the entire navigation via `NavigationTheme`:
 
 ```dart
@@ -374,6 +379,29 @@ final myTheme = NavigationThemeData(
   indicatorColor: Colors.purple,
   itemAnimationDuration: const Duration(milliseconds: 300),
 );
+```
+
+```dart
+NavigationTheme(
+  data: NavigationThemeData(
+    backgroundColor: const Color(0xFF1E1E24),
+    indicatorColor: Colors.blueAccent,
+    itemLabelStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+    itemSelectedLabelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    itemIconColor: Colors.white60,
+    itemSelectedIconColor: Colors.blueAccent,
+  ),
+  child: NavigationView(
+    controller: _controller,
+    appBar: NavigationAppBar(
+      title: const Text('Themed App'),
+    ),
+    pane: NavigationPane(
+      destinations: [ /* ... */ ],
+    ),
+    body: /* ... */,
+  ),
+)
 ```
 
 ### Available Theme Properties

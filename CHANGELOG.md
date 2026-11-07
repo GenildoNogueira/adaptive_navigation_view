@@ -1,7 +1,14 @@
+# [2.2.0]
+
+## Refactor
+
+- **Low-Level Architecture**: Completely rewrote `PaneItemDestination` to run on top of the base Flutter layer (`widgets.dart`, `rendering.dart`, `painting.dart`), removing all implicit dependencies on `Material`.
+- **Theme Reactivity**: `NavigationAppBar` and `NavigationPane` now dynamically react to theme luminance changes (light/dark modes and custom background colors) instantly.
+
 # [2.0.1]
  
 ## Fixed
- 
+
 - Fixed a visual glitch (jitter/tremor) in the navigation pane when opening in RTL languages (e.g. Arabic, Hebrew). The pane now uses `SlideTransition` instead of `widthFactor` + `Align` to animate, eliminating the coordinate conflict between `PaneController` and `_NavigationLayout` that caused the shaking.
 - Fixed `SizeTransition` in `_buildChildrenSection` using a hardcoded `alignment: Alignment.centerLeft`, which caused child items to shift horizontally during expand/collapse in RTL mode. Replaced with `axisAlignment: -1.0` to animate along the vertical axis only.
 - Fixed the expand/collapse chevron in RTL mode: rotation direction is now inverted and the icon is mirrored (`keyboard_arrow_left`) so it correctly animates from ← to ↓ instead of → to ↓.
@@ -9,7 +16,7 @@
 - Fixed children section being removed from the widget tree immediately when collapsing (via `if (_isExpanded)`), which cut off the closing animation. The section is now always present in the tree and `SizeTransition` handles visibility via `sizeFactor`.
 
 ## Changed
- 
+
 - Reorganized README: moved *Display Modes* section after *Installation*, added *Hierarchical Destinations* and *Migrating from v1* sections, and relocated *Accessing the Controller* under *Hierarchical Destinations*.
 - Updated feature description for hierarchical destinations to document the floating popup menu behavior in Medium (compact) mode.
 - Added `formatter: trailing_commas: preserve` to `analysis_options.yaml`.

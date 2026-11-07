@@ -465,7 +465,7 @@ class _ActionButtonState extends State<_ActionButton> {
     const PaneButtonStyle defaultStyle = PaneButtonStyle();
     final PaneButtonStyle effectiveStyle = widget.style ?? defaultStyle;
 
-    // Prioriza a cor herdada do IconTheme da AppBar (que já reagiu ao tema/background)
+    // Prioritizes the color inherited from the AppBar's IconTheme
     final Color iconColor =
         effectiveStyle.iconColor ??
         iconTheme.color ??
@@ -539,8 +539,7 @@ class _ActionButtonState extends State<_ActionButton> {
   }
 }
 
-/// Desenha os ícones de Menu (Hambúrguer) e Menu Open vetorialmente no Canvas,
-/// sem depender da fonte MaterialIcons.
+/// Draw the Menu (Hamburger) and Menu Open icons vectorially on the Canvas.
 class _RawMenuIcon extends StatelessWidget {
   const _RawMenuIcon({
     required this.size,
@@ -660,8 +659,8 @@ class _MenuIconPainter extends CustomPainter {
       oldDelegate.isRTL != isRTL;
 }
 
-/// Substituto puro de [_AppBarDefaults] que reage dinamicamente ao brilho do fundo
-/// e ao [DefaultTextStyle] do app, sem depender de [AppBarTheme] ou [Theme].
+/// A drop-in replacement for [_AppBarDefaults] that reacts dynamically to the background
+/// brightness and the app's [DefaultTextStyle], without relying on [AppBarTheme] or [Theme].
 class _AppBarDefaults {
   _AppBarDefaults(this.context, {Brightness? brightness})
     : _isDark = brightness != null

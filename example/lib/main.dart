@@ -57,7 +57,7 @@ class ThemeController extends ChangeNotifier {
         ),
       AppDesignPreset.fluentWinUI => NavigationThemeData(
           backgroundColor: surface,
-          // Indicador estilo barra lateral fina na esquerda (WinUI 3)
+          // Thin sidebar-style indicator on the left (WinUI 3)
           indicatorColor:
               isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
           indicatorSize: const Size(3.5, 18.0),
@@ -216,7 +216,6 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
                   'Navigation View (${appThemeController.preset.label})',
                 ),
                 actions: [
-                  // Botão para alternar entre os Presets de Design do NavigationTheme
                   IconButton(
                     onPressed: appThemeController.nextPreset,
                     tooltip:
@@ -224,7 +223,6 @@ class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
                     icon: const Icon(Icons.palette_outlined),
                   ),
                   const SizedBox(width: 4),
-                  // Botão para alternar entre Dark e Light Mode
                   IconButton(
                     onPressed: appThemeController.toggleBrightness,
                     tooltip: appThemeController.isDark
