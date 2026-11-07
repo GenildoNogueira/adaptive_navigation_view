@@ -15,5 +15,9 @@ linter:
     always_declare_return_types: true
     require_trailing_commas: true
 
+analyzer:
+  exclude:
+    - build/**
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
