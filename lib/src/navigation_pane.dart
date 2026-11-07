@@ -198,7 +198,6 @@ class NavigationPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(debugCheckHasMaterialLocalizations(context));
     final NavigationThemeData? paneTheme = NavigationTheme.of(context);
     final NavigationViewController navigationViewC = NavigationView.of(
       context,
@@ -207,7 +206,7 @@ class NavigationPane extends StatelessWidget {
       context,
     );
     String? label = semanticLabel;
-    switch (Theme.of(context).platform) {
+    switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         break;
@@ -215,17 +214,18 @@ class NavigationPane extends StatelessWidget {
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-        label = semanticLabel ?? MaterialLocalizations.of(context).drawerLabel;
+        label = semanticLabel ?? 'Navigation Pane';
     }
 
     final isDisplayModeMinimal =
         navigationViewScope.displayMode == DisplayMode.minimal;
 
     final NavigationThemeData defaults = _NavigationDefaults(context);
-    final ShapeBorder? effectiveShape =
-        shape ?? paneTheme?.shape ?? defaults.shape;
-    final ShapeBorder? effectiveMinimalShape =
-        minimalShape ?? paneTheme?.minimalShape ?? defaults.minimalShape;
+    final ShapeBorder effectiveShape =
+        (isDisplayModeMinimal
+            ? (minimalShape ?? paneTheme?.minimalShape ?? defaults.minimalShape)
+            : (shape ?? paneTheme?.shape ?? defaults.shape)) ??
+        const RoundedRectangleBorder();
 
     // Get the selected index from the NavigationViewController
     final selectedIndex = navigationViewC.selectedIndex;
@@ -261,6 +261,19 @@ class NavigationPane extends StatelessWidget {
       );
     }
 
+    final Color effectiveBgColor =
+        backgroundColor ??
+        paneTheme?.backgroundColor ??
+        defaults.backgroundColor ??
+        const Color(0xFFFFFFFF);
+    final double effectiveElevation =
+        elevation ?? paneTheme?.elevation ?? defaults.elevation ?? 0.0;
+    final Color effectiveShadowColor =
+        shadowColor ??
+        paneTheme?.shadowColor ??
+        defaults.shadowColor ??
+        const Color(0x00000000);
+
     return Semantics(
       scopesRoute: true,
       namesRoute: true,
@@ -272,27 +285,26 @@ class NavigationPane extends StatelessWidget {
               ? (paneTheme?.openWidth ?? kOpenNavigationPaneWidth)
               : null,
         ),
-        child: Material(
-          color:
-              backgroundColor ??
-              paneTheme?.backgroundColor ??
-              defaults.backgroundColor,
-          elevation: elevation ?? paneTheme?.elevation ?? defaults.elevation!,
-          shadowColor:
-              shadowColor ?? paneTheme?.shadowColor ?? defaults.shadowColor,
-          surfaceTintColor:
-              surfaceTintColor ??
-              paneTheme?.surfaceTintColor ??
-              defaults.surfaceTintColor,
-          shape: isDisplayModeMinimal ? effectiveMinimalShape : effectiveShape,
-          clipBehavior: effectiveMinimalShape != null || effectiveShape != null
-              ? (clipBehavior ?? Clip.hardEdge)
-              : Clip.none,
-          child: Column(
-            children: [
-              Expanded(child: ListView(children: wrappedChildren)),
-              ...wrappedFooters,
-            ],
+        child: PhysicalShape(
+          clipper: ShapeBorderClipper(
+            shape: effectiveShape,
+            textDirection: Directionality.of(context),
+          ),
+          clipBehavior: clipBehavior ?? Clip.hardEdge,
+          color: effectiveBgColor,
+          elevation: effectiveElevation,
+          shadowColor: effectiveShadowColor,
+          child: CustomPaint(
+            foregroundPainter: _ShapeBorderPainter(
+              shape: effectiveShape,
+              textDirection: Directionality.of(context),
+            ),
+            child: Column(
+              children: [
+                Expanded(child: ListView(children: wrappedChildren)),
+                ...wrappedFooters,
+              ],
+            ),
           ),
         ),
       ),
@@ -685,11 +697,11 @@ class PaneControllerState extends State<PaneController>
 
   ColorTween _buildScrimColorTween() {
     return ColorTween(
-      begin: Colors.transparent,
+      begin: const Color(0x00000000),
       end:
           widget.scrimColor ??
           NavigationTheme.of(context)?.scrimColor ??
-          Colors.black54,
+          const Color(0x8A000000),
     );
   }
 
@@ -726,7 +738,7 @@ class PaneControllerState extends State<PaneController>
     final bool paneIsStart = widget.alignment == PaneAlignment.start;
     final TextDirection textDirection = Directionality.of(context);
     final bool isDesktop;
-    switch (Theme.of(context).platform) {
+    switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.iOS:
       case TargetPlatform.fuchsia:
@@ -773,7 +785,7 @@ class PaneControllerState extends State<PaneController>
       }
     } else {
       final bool platformHasBackButton;
-      switch (Theme.of(context).platform) {
+      switch (defaultTargetPlatform) {
         case TargetPlatform.android:
           platformHasBackButton = true;
         case TargetPlatform.iOS:
@@ -797,9 +809,7 @@ class PaneControllerState extends State<PaneController>
                     child: GestureDetector(
                       onTap: close,
                       child: Semantics(
-                        label: MaterialLocalizations.of(
-                          context,
-                        ).modalBarrierDismissLabel,
+                        label: 'Close',
                         child: Container(
                           // The pane's "scrim"
                           color: _scrimColorTween.evaluate(
@@ -870,7 +880,21 @@ class PaneControllerState extends State<PaneController>
 
   @override
   Widget build(BuildContext context) {
-    assert(debugCheckHasMaterialLocalizations(context));
     return _buildPane(context);
   }
+}
+
+class _ShapeBorderPainter extends CustomPainter {
+  const _ShapeBorderPainter({required this.shape, required this.textDirection});
+  final ShapeBorder shape;
+  final TextDirection textDirection;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    shape.paint(canvas, Offset.zero & size, textDirection: textDirection);
+  }
+
+  @override
+  bool shouldRepaint(_ShapeBorderPainter oldDelegate) =>
+      oldDelegate.shape != shape || oldDelegate.textDirection != textDirection;
 }

@@ -3,9 +3,14 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart'
-    show SystemMouseCursor, SystemUiOverlayStyle, LogicalKeyboardKey;
+    show
+        SystemMouseCursor,
+        SystemMouseCursors,
+        SystemUiOverlayStyle,
+        LogicalKeyboardKey;
+import 'package:flutter/widgets.dart';
 
 part 'navigation_pane.dart';
 part 'navigation_view_controller.dart';
@@ -732,7 +737,7 @@ class NavigationViewState extends State<NavigationView>
       children,
       ConstrainedBox(
         constraints: BoxConstraints(maxHeight: _appBarMaxHeight!),
-        child: FlexibleSpaceBar.createSettings(
+        child: NavigationAppBarSettings(
           currentExtent: _appBarMaxHeight!,
           child: widget.appBar,
         ),
@@ -746,7 +751,7 @@ class NavigationViewState extends State<NavigationView>
 
     _buildNavigationPane(children, textDirection);
 
-    switch (Theme.of(context).platform) {
+    switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         _addIfNonNull(
@@ -837,8 +842,9 @@ class NavigationViewState extends State<NavigationView>
     assert(debugCheckHasMediaQuery(context));
     assert(debugCheckHasDirectionality(context));
 
-    final ThemeData themeData = Theme.of(context);
     final TextDirection textDirection = Directionality.of(context);
+    final NavigationThemeData defaults = _NavigationDefaults(context);
+    final NavigationThemeData? paneTheme = NavigationTheme.of(context);
 
     final EdgeInsets minInsets = MediaQuery.paddingOf(context).copyWith(
       bottom: _resizeToAvoidBottomInset
@@ -874,8 +880,12 @@ class NavigationViewState extends State<NavigationView>
           ]),
           builder: (context, _) {
             final paneWidth = _getAnimatedPaneWidth();
-
             final children = _buildStaticChildren(textDirection);
+
+            final Color effectiveBg =
+                widget.backgroundColor ??
+                paneTheme?.backgroundColor ??
+                defaults.backgroundColor!;
 
             return _NavigationViewScope(
               isPaneOpen: isPaneOpen,
@@ -883,9 +893,8 @@ class NavigationViewState extends State<NavigationView>
               paneActionMoveAnimationProgress:
                   controller.animation?.value ?? (isPaneOpen ? 1.0 : 0.0),
               child: ScrollNotificationObserver(
-                child: Material(
-                  color:
-                      widget.backgroundColor ?? themeData.colorScheme.surface,
+                child: ColoredBox(
+                  color: effectiveBg,
                   child: Actions(
                     actions: <Type, Action<Intent>>{
                       DismissIntent: _DismissPaneAction(context),
@@ -898,11 +907,11 @@ class NavigationViewState extends State<NavigationView>
                     },
                     child: Shortcuts(
                       shortcuts: {
-                        LogicalKeySet(
-                          themeData.platform == TargetPlatform.macOS
-                              ? LogicalKeyboardKey.meta
-                              : LogicalKeyboardKey.control,
+                        SingleActivator(
                           LogicalKeyboardKey.keyB,
+                          meta: defaultTargetPlatform == TargetPlatform.macOS,
+                          control:
+                              defaultTargetPlatform != TargetPlatform.macOS,
                         ): const TogglePaneIntent(),
                       },
                       child: Focus(

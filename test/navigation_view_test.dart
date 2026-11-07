@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adaptive_navigation_view/adaptive_navigation_view.dart';
@@ -14,13 +15,12 @@ void main() {
 
       // Initial state
       expect(controller.selectedIndex, 0);
-      // The constructor adds the initial index
       expect(controller.previousIndices, [0]);
 
       // Navigate to index 1
       controller.selectDestinationByIndex(1);
       expect(controller.selectedIndex, 1);
-      expect(controller.previousIndices, [0, 1]); // Now history is [0, 1]
+      expect(controller.previousIndices, [0, 1]);
 
       // Navigate to index 2
       controller.selectDestinationByIndex(2);
@@ -30,7 +30,6 @@ void main() {
       // Test goBack
       final success = controller.goBack();
       expect(success, isTrue);
-      // It popped the last item (2), so it goes back to 1.
       expect(controller.selectedIndex, 1);
       expect(controller.previousIndices, [0, 1]);
     });
@@ -53,7 +52,6 @@ void main() {
 
       // Test goBack
       controller.goBack();
-      // It popped the last item (/settings), so it goes back to /home.
       expect(controller.selectedPath, '/home');
       expect(controller.previousPaths, ['/home']);
     });
@@ -153,6 +151,7 @@ void main() {
       final controller = NavigationViewController(
         length: 2,
         initialIndex: 0,
+        destinationType: DestinationTypes.byIndex,
         vsync: const TestVSync(),
       );
 
@@ -258,21 +257,27 @@ void main() {
         // Flat index check: Parent = 0, Child = 1
         expect(controller.selectedIndex, 1);
 
-        // Verify PaneIndicator is present within the child's InkWell
+        // Verify PaneIndicator is present and active within the child's PaneItemDestination
         final childTextFinder = find.text('Child');
         expect(childTextFinder, findsOneWidget);
 
-        final inkWellFinder = find.ancestor(
-          of: childTextFinder,
-          matching: find.byType(InkWell),
-        );
-        expect(inkWellFinder, findsWidgets);
+        final childDestinationFinder = find
+            .ancestor(
+              of: childTextFinder,
+              matching: find.byType(PaneItemDestination),
+            )
+            .first;
 
         final indicatorFinder = find.descendant(
-          of: inkWellFinder,
+          of: childDestinationFinder,
           matching: find.byType(PaneIndicator),
         );
-        expect(indicatorFinder, findsWidgets);
+        expect(indicatorFinder, findsOneWidget);
+
+        final PaneIndicator indicator = tester.widget<PaneIndicator>(
+          indicatorFinder,
+        );
+        expect(indicator.animation.value, 1.0);
       },
     );
 
@@ -335,8 +340,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.folder));
         await tester.pumpAndSettle();
 
-        // The menu is opened in an overlay. Tap 'File B'.
-        // find.last is used because MenuAnchor retains the widget in the tree (hidden) as well as the overlay
+        // Tap 'File B' in the flyout overlay
         await tester.tap(find.text('File B').last);
         await tester.pumpAndSettle();
 
@@ -404,17 +408,21 @@ void main() {
         await tester.tap(find.byIcon(Icons.folder));
         await tester.pumpAndSettle();
 
-        // Find 'File A' in the overlay
-        final fileAItem = find.ancestor(
-          of: find.text('File A').last,
-          matching: find.byType(MenuItemButton),
-        );
+        // Find 'File A' item container in the low-level flyout overlay
+        final fileAItem = find
+            .ancestor(
+              of: find.text('File A').last,
+              matching: find.byType(GestureDetector),
+            )
+            .first;
 
-        // Find 'File B' in the overlay
-        final fileBItem = find.ancestor(
-          of: find.text('File B').last,
-          matching: find.byType(MenuItemButton),
-        );
+        // Find 'File B' item container in the low-level flyout overlay
+        final fileBItem = find
+            .ancestor(
+              of: find.text('File B').last,
+              matching: find.byType(GestureDetector),
+            )
+            .first;
 
         // Verify File A's indicator opacity is 1.0 (visible)
         final fileAOpacity = tester.widget<AnimatedOpacity>(
@@ -556,33 +564,50 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Expande a pasta (Folder)
+      // Expand the parent folder
       await tester.tap(find.text('Folder'));
       await tester.pumpAndSettle();
 
-      // Clica no segundo sub-item (File 2)
+      // Tap the second sub-item (File 2)
       await tester.tap(find.text('File 2'));
       await tester.pumpAndSettle();
 
-      // O índice flat esperado é 2 (Folder = 0, File 1 = 1, File 2 = 2)
+      // Expected flat index is 2 (Folder = 0, File 1 = 1, File 2 = 2)
       expect(controller.selectedIndex, 2);
 
-      // (Opcional) Verifica se o indicador foi renderizado corretamente para o File 2
-      final file2TextFinder = find.text('File 2');
-      final inkWellFinder = find.ancestor(
-        of: file2TextFinder,
-        matching: find.byType(InkWell),
+      // Verify that File 2's indicator is active (1.0) and File 1's indicator is inactive (0.0)
+      final file2ItemFinder = find
+          .ancestor(
+            of: find.text('File 2'),
+            matching: find.byType(PaneItemDestination),
+          )
+          .first;
+      final file2Indicator = tester.widget<PaneIndicator>(
+        find.descendant(
+          of: file2ItemFinder,
+          matching: find.byType(PaneIndicator),
+        ),
       );
-      final indicatorFinder = find.descendant(
-        of: inkWellFinder,
-        matching: find.byType(PaneIndicator),
+      expect(file2Indicator.animation.value, 1.0);
+
+      final file1ItemFinder = find
+          .ancestor(
+            of: find.text('File 1'),
+            matching: find.byType(PaneItemDestination),
+          )
+          .first;
+      final file1Indicator = tester.widget<PaneIndicator>(
+        find.descendant(
+          of: file1ItemFinder,
+          matching: find.byType(PaneIndicator),
+        ),
       );
-      expect(indicatorFinder, findsWidgets);
+      expect(file1Indicator.animation.value, 0.0);
     },
   );
 
   testWidgets(
-    'Em RTL, o Stack do PaneItem usa Alignment.centerRight para evitar glitches',
+    'In RTL, PaneItem RenderBox positions leading icon to the right of the label and resolves alignment properly',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -595,12 +620,13 @@ void main() {
       final controller = NavigationViewController(
         length: 1,
         initialIndex: 0,
+        destinationType: DestinationTypes.byIndex,
         vsync: const TestVSync(),
       );
 
       await tester.pumpWidget(
         MaterialApp(
-          // Força a direção de texto para RTL (Árabe, Hebraico, etc.)
+          // Force RTL text direction (Arabic, Hebrew, etc.)
           builder: (context, child) =>
               Directionality(textDirection: TextDirection.rtl, child: child!),
           home: Scaffold(
@@ -626,25 +652,309 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Encontra o indicador visual para ter certeza de que pegamos o Stack correto
       final indicatorFinder = find.byType(PaneIndicator);
       expect(indicatorFinder, findsOneWidget);
 
-      // Pega o Stack que envolve o Indicador e o Conteúdo
-      final stackFinder = find
-          .ancestor(of: indicatorFinder, matching: find.byType(Stack))
-          .first;
-
-      final Stack stackWidget = tester.widget<Stack>(stackFinder);
-
-      // ASSERTIVA PRINCIPAL:
-      // Garante que o alinhamento foi resolvido e não é AlignmentDirectional.centerStart
-      expect(
-        stackWidget.alignment,
-        isNot(equals(AlignmentDirectional.centerStart)),
+      final PaneIndicator indicator = tester.widget<PaneIndicator>(
+        indicatorFinder,
       );
-      // Garante que o alinhamento fixo correto para RTL foi aplicado
-      expect(stackWidget.alignment, equals(Alignment.centerRight));
+
+      // In RTL, AlignmentDirectional.centerStart resolves to Alignment.centerRight
+      expect(
+        indicator.alignment.resolve(TextDirection.rtl),
+        equals(Alignment.centerRight),
+      );
+
+      // Verify in the custom RenderBox that in RTL the icon is positioned to the right (greater dx) of the 'Home' label
+      final Offset iconPos = tester.getTopLeft(find.byIcon(Icons.home));
+      final Offset labelPos = tester.getTopLeft(find.text('Home'));
+      expect(iconPos.dx, greaterThan(labelPos.dx));
     },
   );
+
+  group('Material-Free Tests', () {
+    testWidgets(
+      'Renders and navigates inside a pure WidgetsApp without MaterialApp or Scaffold',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final controller = NavigationViewController(
+          length: 2,
+          initialIndex: 0,
+          destinationType: DestinationTypes.byIndex,
+          vsync: const TestVSync(),
+        );
+
+        await tester.pumpWidget(
+          WidgetsApp(
+            color: const Color(0xFF000000),
+            builder: (context, _) => Directionality(
+              textDirection: TextDirection.ltr,
+              child: NavigationView(
+                controller: controller,
+                appBar: NavigationAppBar(
+                  title: const Text('Pure WidgetsApp Title'),
+                ),
+                pane: const NavigationPane(
+                  destinations: [
+                    PaneItemDestination(
+                      icon: SizedBox(width: 24, height: 24),
+                      label: Text('First Item'),
+                    ),
+                    PaneItemDestination(
+                      icon: SizedBox(width: 24, height: 24),
+                      label: Text('Second Item'),
+                    ),
+                  ],
+                ),
+                body: const Center(child: Text('Material-Free Body')),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pure WidgetsApp Title'), findsOneWidget);
+        expect(find.text('Material-Free Body'), findsOneWidget);
+        expect(controller.selectedIndex, 0);
+
+        await tester.tap(find.text('Second Item'));
+        await tester.pumpAndSettle();
+
+        expect(controller.selectedIndex, 1);
+      },
+    );
+
+    testWidgets(
+      'Supports custom indicatorBuilder, chevronBuilder, trailing slot, and itemBuilder',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        // Total flat slots = 4:
+        // 0: Custom Indicator Item
+        // 1: Custom Chevron Parent
+        // 2: Nested Child
+        // 3: Custom ItemBuilder Item
+        final controller = NavigationViewController(
+          length: 4,
+          initialIndex: 0,
+          destinationType: DestinationTypes.byIndex,
+          vsync: const TestVSync(),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: NavigationView(
+              controller: controller,
+              appBar: NavigationAppBar(title: const Text('Custom Builders')),
+              pane: NavigationPane(
+                destinations: [
+                  PaneItemDestination(
+                    icon: const Icon(Icons.star),
+                    label: const Text('Custom Indicator Item'),
+                    trailing: const Text('99+'),
+                    indicatorBuilder: (context, details) => Container(
+                      key: const ValueKey('custom_winui_indicator'),
+                    ),
+                  ),
+                  PaneItemDestination(
+                    icon: const Icon(Icons.folder),
+                    label: const Text('Custom Chevron Parent'),
+                    chevronBuilder: (context, details) => const Text(
+                      '>>',
+                      key: ValueKey('custom_chevron'),
+                    ),
+                    children: const [
+                      PaneItemDestination(
+                        icon: Icon(Icons.file_open),
+                        label: Text('Nested Child'),
+                      ),
+                    ],
+                  ),
+                  PaneItemDestination(
+                    icon: const SizedBox.shrink(),
+                    label: const SizedBox.shrink(),
+                    itemBuilder: (context, details) => Text(
+                      details.isSelected ? 'ACTIVE_CUSTOM' : 'INACTIVE_CUSTOM',
+                      key: const ValueKey('full_custom_item'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify that indicatorBuilder, trailing, and chevronBuilder are rendered
+        expect(
+          find.byKey(const ValueKey('custom_winui_indicator')),
+          findsOneWidget,
+        );
+        expect(find.text('99+'), findsOneWidget);
+        expect(find.byKey(const ValueKey('custom_chevron')), findsOneWidget);
+        expect(find.text('INACTIVE_CUSTOM'), findsOneWidget);
+
+        // Tap the custom itemBuilder destination (flat index = 3)
+        await tester.tap(find.byKey(const ValueKey('full_custom_item')));
+        await tester.pumpAndSettle();
+
+        expect(controller.selectedIndex, 3);
+        expect(find.text('ACTIVE_CUSTOM'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'WidgetStatesController tracks hover, selected, and disabled states accurately',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final controller = NavigationViewController(
+          length: 2,
+          initialIndex: 0,
+          destinationType: DestinationTypes.byIndex,
+          vsync: const TestVSync(),
+        );
+        final firstStates = WidgetStatesController();
+        final disabledStates = WidgetStatesController();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: NavigationView(
+              controller: controller,
+              appBar: NavigationAppBar(title: const Text('States Test')),
+              pane: NavigationPane(
+                destinations: [
+                  PaneItemDestination(
+                    icon: const Icon(Icons.home),
+                    label: const Text('Interactive Home'),
+                    statesController: firstStates,
+                  ),
+                  PaneItemDestination(
+                    icon: const Icon(Icons.lock),
+                    label: const Text('Locked Item'),
+                    enabled: false,
+                    statesController: disabledStates,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify initial states
+        expect(firstStates.value.contains(WidgetState.selected), isTrue);
+        expect(disabledStates.value.contains(WidgetState.disabled), isTrue);
+
+        // Simulate mouse hover over the first item
+        final gesture = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.addPointer(location: Offset.zero);
+        addTearDown(gesture.removePointer);
+
+        await gesture.moveTo(tester.getCenter(find.text('Interactive Home')));
+        await tester.pumpAndSettle();
+
+        expect(firstStates.value.contains(WidgetState.hovered), isTrue);
+
+        // Attempt to tap the disabled item and ensure selection does not change
+        await tester.tap(find.text('Locked Item'));
+        await tester.pumpAndSettle();
+        expect(controller.selectedIndex, 0);
+      },
+    );
+
+    testWidgets(
+      'NavigationAppBar adapts title text color automatically when background luminance changes',
+      (WidgetTester tester) async {
+        final controller = NavigationViewController(
+          length: 1,
+          initialIndex: 0,
+          destinationType: DestinationTypes.byIndex,
+          vsync: const TestVSync(),
+        );
+        final ValueNotifier<Color> bgNotifier = ValueNotifier<Color>(
+          const Color(0xFF18181B), // Dark background initially
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ValueListenableBuilder<Color>(
+              valueListenable: bgNotifier,
+              builder: (context, bgColor, _) {
+                return NavigationTheme(
+                  data: NavigationThemeData(backgroundColor: bgColor),
+                  child: NavigationView(
+                    controller: controller,
+                    appBar: NavigationAppBar(
+                      title: const Text('Adaptive Title'),
+                    ),
+                    pane: const NavigationPane(
+                      destinations: [
+                        PaneItemDestination(
+                          icon: Icon(Icons.home),
+                          label: Text('Home'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // With dark background, title text color should be light (luminance > 0.5)
+        final DefaultTextStyle titleStyleDark = tester.widget<DefaultTextStyle>(
+          find
+              .ancestor(
+                of: find.text('Adaptive Title'),
+                matching: find.byType(DefaultTextStyle),
+              )
+              .first,
+        );
+        expect(
+          titleStyleDark.style.color!.computeLuminance(),
+          greaterThan(0.5),
+        );
+
+        // Switch to light background
+        bgNotifier.value = const Color(0xFFF8F9FA);
+        await tester.pumpAndSettle();
+
+        // With light background, title text color should react and become dark (luminance < 0.5)
+        final DefaultTextStyle titleStyleLight = tester
+            .widget<DefaultTextStyle>(
+              find
+                  .ancestor(
+                    of: find.text('Adaptive Title'),
+                    matching: find.byType(DefaultTextStyle),
+                  )
+                  .first,
+            );
+        expect(titleStyleLight.style.color!.computeLuminance(), lessThan(0.5));
+      },
+    );
+  });
 }

@@ -890,17 +890,40 @@ class _NavigationDefaults extends NavigationThemeData {
   _NavigationDefaults(this.context) : super(elevation: 0.0);
 
   final BuildContext context;
-  late final ThemeData _theme = Theme.of(context);
-  late final ColorScheme _colors = _theme.colorScheme;
-  late final TextTheme _textTheme = _theme.textTheme;
 
-  // There isn't currently a token for this value, but it is shown in the spec,
-  // so hard coding here for now.
+  late final bool _isDark = () {
+    final Color? themeBg = NavigationTheme.of(context)?.backgroundColor;
+    if (themeBg != null) {
+      return themeBg.computeLuminance() < 0.5;
+    }
+    final Color? ambientTextColor = DefaultTextStyle.of(context).style.color;
+    if (ambientTextColor != null &&
+        ambientTextColor != const Color(0xFF000000)) {
+      return ambientTextColor.computeLuminance() > 0.5;
+    }
+    return MediaQuery.maybePlatformBrightnessOf(context) == Brightness.dark;
+  }();
+
+  Color get _surface =>
+      _isDark ? const Color(0xFF1E1E24) : const Color(0xFFF8F9FA);
+  Color get _onSurface =>
+      _isDark ? const Color(0xFFE6E1E5) : const Color(0xFF1C1B1F);
+  Color get _onSurfaceVariant =>
+      _isDark ? const Color(0xFFCAC4D0) : const Color(0xFF49454F);
+  Color get _secondaryContainer =>
+      _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  Color get _onSecondaryContainer =>
+      _isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+
+  @override
+  Color? get backgroundColor => _surface;
+
+  @override
+  Color? get shadowColor => const Color(0x33000000);
+
   @override
   ShapeBorder? get shape => const RoundedRectangleBorder();
 
-  // There isn't currently a token for this value, but it is shown in the spec,
-  // so hard coding here for now.
   @override
   ShapeBorder? get minimalShape {
     final direction = Directionality.of(context);
@@ -912,7 +935,7 @@ class _NavigationDefaults extends NavigationThemeData {
   }
 
   @override
-  Color? get indicatorColor => _colors.secondaryContainer;
+  Color? get indicatorColor => _secondaryContainer;
 
   @override
   ShapeBorder? get indicatorShape => const StadiumBorder();
@@ -943,29 +966,29 @@ class _NavigationDefaults extends NavigationThemeData {
   WidgetStateProperty<Color?>? get itemBackgroundColor =>
       WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return _colors.secondaryContainer.withAlpha(127);
+          return _secondaryContainer.withAlpha(127);
         }
-        return Colors.transparent;
+        return const Color(0x00000000);
       });
 
   @override
-  Color? get itemHoverBackgroundColor => _colors.onSurface.withAlpha(20);
+  Color? get itemHoverBackgroundColor => _onSurface.withAlpha(20);
 
   @override
-  Color? get itemPressedBackgroundColor => _colors.onSurface.withAlpha(30);
+  Color? get itemPressedBackgroundColor => _onSurface.withAlpha(30);
 
   @override
   WidgetStateProperty<ShapeBorder?>? get itemShape =>
-      WidgetStateProperty.all(const StadiumBorder());
+      const WidgetStatePropertyAll(StadiumBorder());
 
   @override
-  Color? get itemChevronColor => _colors.onSurfaceVariant;
+  Color? get itemChevronColor => _onSurfaceVariant;
 
   @override
-  Color? get itemChevronHoverColor => _colors.onSurface;
+  Color? get itemChevronHoverColor => _onSurface;
 
   @override
-  Color? get itemSelectedChevronColor => _colors.onSecondaryContainer;
+  Color? get itemSelectedChevronColor => _onSecondaryContainer;
 
   @override
   double? get itemChildrenIndent => 18.0;
@@ -976,24 +999,29 @@ class _NavigationDefaults extends NavigationThemeData {
         return IconThemeData(
           size: 24.0,
           color: states.contains(WidgetState.disabled)
-              ? _colors.onSurfaceVariant.withAlpha(96)
+              ? _onSurfaceVariant.withAlpha(96)
               : states.contains(WidgetState.selected)
-              ? _colors.onSecondaryContainer
-              : _colors.onSurfaceVariant,
+              ? _onSecondaryContainer
+              : _onSurfaceVariant,
         );
       });
 
   @override
   WidgetStateProperty<TextStyle?>? get labelTextStyle =>
       WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-        final TextStyle style = _textTheme.labelLarge!;
-        return style.apply(
-          color: states.contains(WidgetState.disabled)
-              ? _colors.onSurfaceVariant.withAlpha(96)
-              : states.contains(WidgetState.selected)
-              ? _colors.onSecondaryContainer
-              : _colors.onSurfaceVariant,
+        final TextStyle baseStyle = DefaultTextStyle.of(context).style;
+        final Color textColor = states.contains(WidgetState.disabled)
+            ? _onSurfaceVariant.withAlpha(96)
+            : states.contains(WidgetState.selected)
+            ? _onSecondaryContainer
+            : _onSurfaceVariant;
+
+        return baseStyle.copyWith(
+          fontSize: 14.0,
+          fontWeight: FontWeight.w500,
+          color: textColor,
           overflow: TextOverflow.ellipsis,
+          decoration: TextDecoration.none,
         );
       });
 }

@@ -14,9 +14,9 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
     super.key,
     this.centerTitle,
     this.title,
-    this.titleSpacing = 16,
+    this.titleSpacing = 16.0,
     this.titleTextStyle,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20),
+    this.padding = const EdgeInsets.symmetric(horizontal: 20.0),
     this.actions,
     this.appBarHeight,
     this.additionalLending,
@@ -26,27 +26,20 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.foregroundColor,
     this.iconTheme,
     this.actionsIconTheme,
+    this.systemOverlayStyle,
+    this.elevation = 0.0,
+    this.shadowColor = const Color(0x00000000),
   }) : preferredSize = _PreferredAppBarSize(appBarHeight);
 
-  /// Used by [NavigationView] to compute its [NavigationAppBar]'s overall height. The returned value is
-  /// the same `preferredSize.height` unless [NavigationAppBar.appBarHeight] was null and
-  /// `AppBarTheme.of(context).toolbarHeight` is non-null. In that case the
-  /// return value is the sum of the theme's toolbar height and the height of
-  /// the app bar's [AppBar.bottom] widget.
+  /// Used by [NavigationView] to compute its [NavigationAppBar]'s overall height.
   static double preferredHeightFor(BuildContext context, Size preferredSize) {
     if (preferredSize is _PreferredAppBarSize &&
         preferredSize.appBarHeight == null) {
-      return (AppBarTheme.of(context).toolbarHeight ?? _kDefaultAppBarHeight);
+      return _kDefaultAppBarHeight;
     }
     return preferredSize.height;
   }
 
-  /// {@template flutter.material.appbar.preferredSize}
-  /// A size whose height is the sum of [appBarHeight] and the [bottom] widget's
-  /// preferred height.
-  ///
-  /// [Scaffold] uses this size to set its app bar's height.
-  /// {@endtemplate}
   @override
   final Size preferredSize;
 
@@ -55,135 +48,57 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
   /// Typically a [Text] widget that contains the app name.
   final Widget? title;
 
-  /// {@template flutter.material.appbar.titleSpacing}
-  /// The spacing around [title] content on the horizontal axis. This spacing is
-  /// applied even if there is no [leading] content or [actions]. If you want
-  /// [title] to take all the space available, set this value to 0.0.
-  ///
-  /// If this property is null, then [AppBarTheme.titleSpacing] of
-  /// [ThemeData.appBarTheme] is used. If that is also null, then the
-  /// default value is [NavigationToolbar.kMiddleSpacing].
-  /// {@endtemplate}
+  /// Horizontal spacing around the [title].
   final double? titleSpacing;
 
-  /// {@template flutter.material.appbar.foregroundColor}
-  /// The default color for [Text] and [Icon]s within the app bar.
-  ///
-  /// If null, then [AppBarTheme.foregroundColor] is used. If that
-  /// value is also null, then [AppBar] uses the overall theme's
-  /// [ColorScheme.onPrimary] if the overall theme's brightness is
-  /// [Brightness.light], and [ColorScheme.onSurface] if the overall
-  /// theme's brightness is [Brightness.dark].
-  ///
-  /// This color is used to configure [DefaultTextStyle] that contains
-  /// the toolbar's children, and the default [IconTheme] widgets that
-  /// are created if [iconTheme] and [actionsIconTheme] are null.
-  /// {@endtemplate}
-  ///
-  /// See also:
-  ///
-  ///  * [backgroundColor], which specifies the app bar's background color.
-  ///  * [Theme.of], which returns the current overall Material theme as
-  ///    a [ThemeData].
-  ///  * [ThemeData.colorScheme], the thirteen colors that most Material widget
-  ///    default colors are based on.
-  ///  * [ColorScheme.brightness], which indicates if the overall [Theme]
-  ///    is light or dark.
+  /// Default color for text and icons within the bar.
   final Color? foregroundColor;
 
-  /// {@template flutter.material.appbar.iconTheme}
-  /// The color, opacity, and size to use for toolbar icons.
-  ///
-  /// If this property is null, then a copy of [ThemeData.iconTheme]
-  /// is used, with the [IconThemeData.color] set to the
-  /// app bar's [foregroundColor].
-  /// {@endtemplate}
-  ///
-  /// See also:
-  ///
-  ///  * [actionsIconTheme], which defines the appearance of icons in
-  ///    the [actions] list.
+  /// Icon theme for the leading element / button in the panel.
   final IconThemeData? iconTheme;
 
-  /// {@template flutter.material.appbar.actionsIconTheme}
-  /// The color, opacity, and size to use for the icons that appear in the app
-  /// bar's [actions].
-  ///
-  /// This property should only be used when the [actions] should be
-  /// themed differently than the icon that appears in the app bar's [leading]
-  /// widget.
-  ///
-  /// If this property is null, then [AppBarTheme.actionsIconTheme] of
-  /// [ThemeData.appBarTheme] is used. If that is also null, then the value of
-  /// [iconTheme] is used.
-  /// {@endtemplate}
-  ///
-  /// See also:
-  ///
-  ///  * [iconTheme], which defines the appearance of all of the toolbar icons.
+  /// Icon theme for the [actions] list.
   final IconThemeData? actionsIconTheme;
 
-  /// {@template flutter.material.appbar.centerTitle}
-  /// Whether the title should be centered.
-  ///
-  /// If this property is null, then [AppBarTheme.centerTitle] of
-  /// [ThemeData.appBarTheme] is used. If that is also null, then value is
-  /// adapted to the current [TargetPlatform].
-  /// {@endtemplate}
+  /// Specifies whether the title should be centered.
   final bool? centerTitle;
 
-  /// {@template flutter.material.appbar.titleTextStyle}
-  /// The default text style for the AppBar's [title] widget.
-  ///
-  /// If this property is null, then [AppBarTheme.titleTextStyle] of
-  /// [ThemeData.appBarTheme] is used. If that is also null, the default
-  /// value is a copy of the overall theme's [TextTheme.titleLarge]
-  /// [TextStyle], with color set to the app bar's [foregroundColor].
-  /// {@endtemplate}
-  ///
-  /// See also:
-  ///
-  ///  * [toolbarTextStyle], which is the default text style for the AppBar's
-  ///    [title], [leading], and [actions] widgets, also known as the
-  ///    AppBar's "toolbar".
-  ///  * [DefaultTextStyle], which overrides the default text style for all of the
-  ///    widgets in a subtree.
+  /// Text style for the [title].
   final TextStyle? titleTextStyle;
 
-  /// A list of Widgets to display in a row after the [title] widget.
-  ///
-  /// Typically these widgets are [IconButton]s representing common
-  /// operations.
+  /// Widgets displayed to the right of the [title].
   final List<Widget>? actions;
 
-  /// The height of the app bar. [_kDefaultAppBarHeight] is used by default
+  /// Custom app bar height. Default: [_kDefaultAppBarHeight].
   final double? appBarHeight;
 
-  /// Additional leading widget to display before the [title] widget.
-  ///
-  /// This widget is typically used for adding custom leading content, such as
-  /// additional icons or widgets that appear before the main title in the app bar.
+  /// Additional widget displayed before the panel button/title.
   final Widget? additionalLending;
 
-  /// {@template flutter.material.appbar.leadingWidth}
-  /// Defines the width of [AppBar.leading] widget.
-  ///
-  /// By default, the value of [AppBar.leadingWidth] is 56.0.
-  /// {@endtemplate}
+  /// Width reserved for the leading area.
   final double? leadingWidth;
 
-  /// The background color of this app bar.
+  /// Bar background color.
   final Color? backgroundColor;
 
-  /// {@macro flutter.material.Material.clipBehavior}
+  /// Clipping behavior.
   final Clip? clipBehavior;
+
+  /// System status bar style.
+  final SystemUiOverlayStyle? systemOverlayStyle;
+
+  /// Optional bar lift.
+  final double elevation;
+
+  /// Shadow color when [elevation] > 0.
+  final Color shadowColor;
 
   @override
   State<NavigationAppBar> createState() => _NavigationAppBarState();
 
-  bool _getEffectiveCenterTitle(ThemeData theme) {
+  bool _getEffectiveCenterTitle() {
     bool platformCenter() {
-      switch (theme.platform) {
+      switch (defaultTargetPlatform) {
         case TargetPlatform.android:
         case TargetPlatform.fuchsia:
         case TargetPlatform.linux:
@@ -195,33 +110,25 @@ class NavigationAppBar extends StatefulWidget implements PreferredSizeWidget {
       }
     }
 
-    return centerTitle ?? theme.appBarTheme.centerTitle ?? platformCenter();
+    return centerTitle ?? platformCenter();
   }
 }
 
 class _NavigationAppBarState extends State<NavigationAppBar> {
-  // Cache _AppBarDefaults so its late-final fields (Theme, ColorScheme,
-  // TextTheme) are not re-evaluated on every rebuild.
-  _AppBarDefaults? _cachedDefaults;
-  ThemeData? _cachedTheme;
-
-  _AppBarDefaults _getDefaults(BuildContext context) {
-    final theme = Theme.of(context);
-    if (_cachedTheme != theme) {
-      _cachedTheme = theme;
-      _cachedDefaults = _AppBarDefaults(context);
+  static Brightness _estimateBrightnessForColor(Color color) {
+    final double relativeLuminance = color.computeLuminance();
+    const double kThreshold = 0.15;
+    if ((relativeLuminance + 0.05) * (relativeLuminance + 0.05) > kThreshold) {
+      return Brightness.light;
     }
-    return _cachedDefaults!;
+    return Brightness.dark;
   }
 
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
     final double topPadding = MediaQuery.viewPaddingOf(context).top;
-    final ThemeData theme = Theme.of(context);
-    final IconButtonThemeData iconButtonTheme = IconButtonTheme.of(context);
-    final appBarTheme = AppBarTheme.of(context);
-    final defaults = _getDefaults(context);
+    final NavigationThemeData? navTheme = NavigationTheme.of(context);
     final _NavigationViewScope navigationViewScope = _NavigationViewScope.of(
       context,
     );
@@ -229,42 +136,52 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
     final bool isDisplayModeOpen =
         navigationViewScope.displayMode == DisplayMode.expanded;
 
-    final TextStyle? titleTextStyle =
-        widget.titleTextStyle ??
-        appBarTheme.titleTextStyle ??
-        defaults.titleTextStyle;
+    final Color backgroundColor =
+        widget.backgroundColor ??
+        navTheme?.backgroundColor ??
+        _AppBarDefaults.resolveDefaultBackground(context);
 
-    final backgroundColor = widget.backgroundColor ?? theme.colorScheme.surface;
+    // Calculates defaults based on the actual luminance of the backgroundColor!
+    // So, if the background changes to light or dark, the text and icons react instantly.
+    final Brightness effectiveBrightness = _estimateBrightnessForColor(
+      backgroundColor,
+    );
+    final _AppBarDefaults defaults = _AppBarDefaults(
+      context,
+      brightness: effectiveBrightness,
+    );
 
     final Color foregroundColor =
         widget.foregroundColor ??
-        appBarTheme.foregroundColor ??
-        defaults.foregroundColor!;
+        navTheme?.itemLabelStyle?.color ??
+        navTheme?.labelTextStyle?.resolve(const <WidgetState>{})?.color ??
+        defaults.foregroundColor;
+
+    final TextStyle titleTextStyle =
+        widget.titleTextStyle ??
+        defaults.titleTextStyle.copyWith(color: foregroundColor);
+
+    final Color effectiveLeadingIconColor =
+        widget.foregroundColor ??
+        navTheme?.itemIconColor ??
+        navTheme?.iconTheme?.resolve(const <WidgetState>{})?.color ??
+        foregroundColor;
 
     final IconThemeData overallIconTheme =
         widget.iconTheme ??
-        appBarTheme.iconTheme ??
-        defaults.iconTheme!.copyWith(color: foregroundColor);
+        defaults.iconTheme.copyWith(color: effectiveLeadingIconColor);
 
-    final Color? actionForegroundColor =
-        widget.foregroundColor ?? appBarTheme.foregroundColor;
     final IconThemeData actionsIconTheme =
         widget.actionsIconTheme ??
-        appBarTheme.actionsIconTheme ??
         widget.iconTheme ??
-        appBarTheme.iconTheme ??
-        defaults.actionsIconTheme?.copyWith(color: actionForegroundColor) ??
-        overallIconTheme;
+        defaults.actionsIconTheme.copyWith(color: foregroundColor);
 
-    final double appBarHeight =
-        widget.appBarHeight ??
-        appBarTheme.toolbarHeight ??
-        _kDefaultAppBarHeight;
+    final double appBarHeight = widget.appBarHeight ?? _kDefaultAppBarHeight;
 
     Widget? title = widget.title;
     if (title != null) {
       title = Semantics(
-        namesRoute: switch (theme.platform) {
+        namesRoute: switch (defaultTargetPlatform) {
           TargetPlatform.android ||
           TargetPlatform.fuchsia ||
           TargetPlatform.linux ||
@@ -276,7 +193,7 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
       );
 
       title = DefaultTextStyle(
-        style: titleTextStyle!,
+        style: titleTextStyle,
         softWrap: false,
         overflow: TextOverflow.ellipsis,
         child: title,
@@ -294,24 +211,10 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
 
     Widget? actions;
     if (widget.actions != null && widget.actions!.isNotEmpty) {
-      final IconButtonThemeData effectiveActionsIconButtonTheme;
-      if (actionsIconTheme == defaults.actionsIconTheme) {
-        effectiveActionsIconButtonTheme = iconButtonTheme;
-      } else {
-        // Build the merged style directly without the intermediate
-        // IconButton.styleFrom allocation.
-        effectiveActionsIconButtonTheme = IconButtonThemeData(
-          style: iconButtonTheme.style?.copyWith(
-            foregroundColor: WidgetStatePropertyAll(actionsIconTheme.color),
-            iconSize: WidgetStatePropertyAll(actionsIconTheme.size),
-          ),
-        );
-      }
-
-      actions = IconButtonTheme(
-        data: effectiveActionsIconButtonTheme,
-        child: IconTheme.merge(
-          data: actionsIconTheme,
+      actions = IconTheme.merge(
+        data: actionsIconTheme,
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: foregroundColor),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -321,27 +224,30 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
       );
     }
 
-    final Widget toolbar = NavigationToolbar(
-      leading: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.additionalLending != null) widget.additionalLending!,
-          if (!isDisplayModeOpen)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: PaneButton(
-                isClose: navigationViewScope.isPaneOpen,
-              ),
-            ),
-        ],
+    final Widget toolbar = Padding(
+      padding: widget.padding,
+      child: NavigationToolbar(
+        leading: IconTheme.merge(
+          data: overallIconTheme,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.additionalLending != null) widget.additionalLending!,
+              if (!isDisplayModeOpen)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: PaneButton(
+                    isClose: navigationViewScope.isPaneOpen,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        middle: title,
+        trailing: actions,
+        centerMiddle: widget._getEffectiveCenterTitle(),
+        middleSpacing: widget.titleSpacing ?? NavigationToolbar.kMiddleSpacing,
       ),
-      middle: title,
-      trailing: actions,
-      centerMiddle: widget._getEffectiveCenterTitle(theme),
-      middleSpacing:
-          widget.titleSpacing ??
-          appBarTheme.titleSpacing ??
-          NavigationToolbar.kMiddleSpacing,
     );
 
     // If the toolbar is allocated less than toolbarHeight make it
@@ -352,31 +258,29 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
         delegate: _ToolbarContainerLayout(appBarHeight),
         child: IconTheme.merge(
           data: overallIconTheme,
-          child: toolbar,
+          child: DefaultTextStyle(
+            style: defaults.toolbarTextStyle.copyWith(color: foregroundColor),
+            child: toolbar,
+          ),
         ),
       ),
     );
 
     final SystemUiOverlayStyle overlayStyle =
-        appBarTheme.systemOverlayStyle ??
-        defaults.systemOverlayStyle ??
+        widget.systemOverlayStyle ??
         _systemOverlayStyleForBrightness(
-          ThemeData.estimateBrightnessForColor(backgroundColor),
-          // Make the status bar transparent for M3 so the elevation overlay
-          // color is picked up by the statusbar.
-          theme.useMaterial3 ? const Color(0x00000000) : null,
+          effectiveBrightness,
+          const Color(0x00000000),
         );
 
     return Semantics(
       container: true,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlayStyle,
-        child: Material(
+        child: PhysicalModel(
           color: backgroundColor,
-          type: MaterialType.canvas,
-          shadowColor: appBarTheme.shadowColor ?? defaults.shadowColor,
-          surfaceTintColor:
-              appBarTheme.surfaceTintColor ?? defaults.surfaceTintColor,
+          elevation: widget.elevation,
+          shadowColor: widget.shadowColor,
           child: Padding(
             padding: EdgeInsets.only(top: topPadding),
             child: Semantics(
@@ -406,7 +310,25 @@ class _NavigationAppBarState extends State<NavigationAppBar> {
   }
 }
 
-// Bottom justify the toolbarHeight child which may overflow the top.
+class NavigationAppBarSettings extends InheritedWidget {
+  const NavigationAppBarSettings({
+    super.key,
+    required this.currentExtent,
+    required super.child,
+  });
+
+  final double currentExtent;
+
+  static NavigationAppBarSettings? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<NavigationAppBarSettings>();
+  }
+
+  @override
+  bool updateShouldNotify(NavigationAppBarSettings oldWidget) =>
+      currentExtent != oldWidget.currentExtent;
+}
+
 class _ToolbarContainerLayout extends SingleChildLayoutDelegate {
   const _ToolbarContainerLayout(this.toolbarHeight);
 
@@ -434,26 +356,50 @@ class _ToolbarContainerLayout extends SingleChildLayoutDelegate {
 
 class _PreferredAppBarSize extends Size {
   _PreferredAppBarSize(this.appBarHeight)
-    : super.fromHeight((appBarHeight ?? _kDefaultAppBarHeight));
+    : super.fromHeight(appBarHeight ?? _kDefaultAppBarHeight);
 
   final double? appBarHeight;
 }
 
-/// The [PaneButton] is an [IconButton] adorned with a "pane" icon. When pressed,
-/// the button invokes [NavigationViewState.openPane] for the associated
-/// [NavigationView.pane].
-///
-/// The default behavior upon pressing can be customized using [onPressed].
+@immutable
+class PaneButtonStyle {
+  const PaneButtonStyle({
+    this.size = 36.0,
+    this.padding = const EdgeInsets.all(6.0),
+    this.shape = const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(6.0)),
+    ),
+    this.backgroundColor,
+    this.hoverColor,
+    this.pressedColor,
+    this.iconColor,
+    this.iconSize,
+  });
+
+  final double size;
+  final EdgeInsetsGeometry padding;
+  final ShapeBorder shape;
+  final Color? backgroundColor;
+  final Color? hoverColor;
+  final Color? pressedColor;
+  final Color? iconColor;
+  final double? iconSize;
+}
+
 class PaneButton extends _ActionButton {
-  /// Creates a Material Design drawer icon button.
   const PaneButton({
     super.key,
     super.style,
-    super.icon = const Icon(Icons.menu),
-    super.iconClose = const Icon(Icons.menu_open),
+    super.icon,
+    super.iconClose,
     required super.isClose,
     super.onPressed,
+    this.openSemanticLabel = 'Open navigation menu',
+    this.closeSemanticLabel = 'Close navigation menu',
   });
+
+  final String openSemanticLabel;
+  final String closeSemanticLabel;
 
   @override
   void _onPressedCallback(BuildContext context) => isClose
@@ -462,48 +408,32 @@ class PaneButton extends _ActionButton {
 
   @override
   String _getTooltip(BuildContext context) {
-    return isClose
-        ? MaterialLocalizations.of(context).closeButtonTooltip
-        : MaterialLocalizations.of(context).openAppDrawerTooltip;
+    return isClose ? closeSemanticLabel : openSemanticLabel;
   }
 }
 
-abstract class _ActionButton extends StatelessWidget {
-  /// Creates a Material Design icon button.
+abstract class _ActionButton extends StatefulWidget {
   const _ActionButton({
     super.key,
-    required this.icon,
-    required this.iconClose,
+    this.icon,
+    this.iconClose,
     required this.isClose,
-    required this.onPressed,
+    this.onPressed,
     this.style,
   });
 
-  /// The icon to display inside the button.
-  final Widget icon;
+  /// Custom icon widget when the panel is closed.
+  /// If null, draw the menu vector icon via Canvas.
+  final Widget? icon;
 
-  /// The icon to display inside the button.
-  final Widget iconClose;
+  /// Custom icon widget when the panel is open.
+  /// If null, draw the open-menu vector icon via Canvas.
+  final Widget? iconClose;
 
   final bool isClose;
-
-  /// The callback that is called when the button is tapped
-  /// or otherwise activated.
-  ///
-  /// If this is set to null, the button will do a default action
-  /// when it is tapped or activated.
   final VoidCallback? onPressed;
+  final PaneButtonStyle? style;
 
-  /// Customizes this icon button's appearance.
-  ///
-  /// The [style] is only used for Material 3 [IconButton]s. If [ThemeData.useMaterial3]
-  /// is set to true, [style] is preferred for icon button customization, and any
-  /// parameters defined in [style] will override the same parameters in [IconButton].
-  ///
-  /// Null by default.
-  final ButtonStyle? style;
-
-  /// This returns the appropriate tooltip text for this action button.
   String _getTooltip(BuildContext context);
 
   /// This is the default function that is called when [onPressed] is set
@@ -511,64 +441,287 @@ abstract class _ActionButton extends StatelessWidget {
   void _onPressedCallback(BuildContext context);
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+  bool _isFocused = false;
+
+  void _triggerTap() {
+    if (widget.onPressed != null) {
+      widget.onPressed!();
+    } else {
+      widget._onPressedCallback(context);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    assert(debugCheckHasMaterialLocalizations(context));
-    return IconButton(
-      icon: isClose ? iconClose : icon,
-      style: style,
-      tooltip: _getTooltip(context),
-      onPressed: () {
-        if (onPressed != null) {
-          onPressed!();
-        } else {
-          _onPressedCallback(context);
-        }
-      },
+    final IconThemeData iconTheme = IconTheme.of(context);
+    final NavigationThemeData? navTheme = NavigationTheme.of(context);
+    final _NavigationDefaults navDefaults = _NavigationDefaults(context);
+    const PaneButtonStyle defaultStyle = PaneButtonStyle();
+    final PaneButtonStyle effectiveStyle = widget.style ?? defaultStyle;
+
+    // Prioriza a cor herdada do IconTheme da AppBar (que já reagiu ao tema/background)
+    final Color iconColor =
+        effectiveStyle.iconColor ??
+        iconTheme.color ??
+        navTheme?.itemIconColor ??
+        navDefaults.itemIconColor ??
+        const Color(0xFF1C1B1F);
+
+    final double iconSize = effectiveStyle.iconSize ?? iconTheme.size ?? 20.0;
+
+    Color bgColor = effectiveStyle.backgroundColor ?? const Color(0x00000000);
+    if (_isPressed) {
+      bgColor =
+          effectiveStyle.pressedColor ??
+          navTheme?.itemPressedBackgroundColor ??
+          iconColor.withAlpha(30);
+    } else if (_isHovered || _isFocused) {
+      bgColor =
+          effectiveStyle.hoverColor ??
+          navTheme?.itemHoverBackgroundColor ??
+          iconColor.withAlpha(20);
+    }
+
+    final Widget activeChild = widget.isClose
+        ? (widget.iconClose ??
+              _RawMenuIcon(size: iconSize, color: iconColor, isOpen: true))
+        : (widget.icon ??
+              _RawMenuIcon(size: iconSize, color: iconColor, isOpen: false));
+
+    return Semantics(
+      button: true,
+      label: widget._getTooltip(context),
+      child: FocusableActionDetector(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => _triggerTap(),
+          ),
+          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+            onInvoke: (_) => _triggerTap(),
+          ),
+        },
+        onShowHoverHighlight: (v) => setState(() => _isHovered = v),
+        onShowFocusHighlight: (v) => setState(() => _isFocused = v),
+        mouseCursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _triggerTap,
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: SizedBox.square(
+            dimension: effectiveStyle.size,
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                color: bgColor,
+                shape: effectiveStyle.shape,
+              ),
+              child: Padding(
+                padding: effectiveStyle.padding,
+                child: Center(
+                  child: IconTheme.merge(
+                    data: IconThemeData(color: iconColor, size: iconSize),
+                    child: activeChild,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _AppBarDefaults extends AppBarTheme {
-  _AppBarDefaults(this.context)
-    : super(
-        elevation: 0.0,
-        scrolledUnderElevation: 3.0,
-        titleSpacing: NavigationToolbar.kMiddleSpacing,
-        toolbarHeight: 64.0,
+/// Desenha os ícones de Menu (Hambúrguer) e Menu Open vetorialmente no Canvas,
+/// sem depender da fonte MaterialIcons.
+class _RawMenuIcon extends StatelessWidget {
+  const _RawMenuIcon({
+    required this.size,
+    required this.color,
+    required this.isOpen,
+  });
+
+  final double size;
+  final Color color;
+  final bool isOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _MenuIconPainter(
+        color: color,
+        isOpen: isOpen,
+        isRTL: Directionality.of(context) == TextDirection.rtl,
+      ),
+    );
+  }
+}
+
+class _MenuIconPainter extends CustomPainter {
+  const _MenuIconPainter({
+    required this.color,
+    required this.isOpen,
+    required this.isRTL,
+  });
+
+  final Color color;
+  final bool isOpen;
+  final bool isRTL;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.09
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final double w = size.width;
+    final double h = size.height;
+
+    if (!isOpen) {
+      canvas.drawLine(
+        Offset(w * 0.16, h * 0.26),
+        Offset(w * 0.84, h * 0.26),
+        paint,
       );
+      canvas.drawLine(
+        Offset(w * 0.16, h * 0.50),
+        Offset(w * 0.84, h * 0.50),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(w * 0.16, h * 0.74),
+        Offset(w * 0.84, h * 0.74),
+        paint,
+      );
+    } else {
+      if (isRTL) {
+        canvas.drawLine(
+          Offset(w * 0.16, h * 0.26),
+          Offset(w * 0.84, h * 0.26),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(w * 0.36, h * 0.50),
+          Offset(w * 0.84, h * 0.50),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(w * 0.16, h * 0.74),
+          Offset(w * 0.84, h * 0.74),
+          paint,
+        );
+
+        final Path chevron = Path()
+          ..moveTo(w * 0.16, h * 0.36)
+          ..lineTo(w * 0.30, h * 0.50)
+          ..lineTo(w * 0.16, h * 0.64);
+        canvas.drawPath(chevron, paint);
+      } else {
+        canvas.drawLine(
+          Offset(w * 0.16, h * 0.26),
+          Offset(w * 0.84, h * 0.26),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(w * 0.16, h * 0.50),
+          Offset(w * 0.64, h * 0.50),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(w * 0.16, h * 0.74),
+          Offset(w * 0.84, h * 0.74),
+          paint,
+        );
+
+        final Path chevron = Path()
+          ..moveTo(w * 0.84, h * 0.36)
+          ..lineTo(w * 0.70, h * 0.50)
+          ..lineTo(w * 0.84, h * 0.64);
+        canvas.drawPath(chevron, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MenuIconPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.isOpen != isOpen ||
+      oldDelegate.isRTL != isRTL;
+}
+
+/// Substituto puro de [_AppBarDefaults] que reage dinamicamente ao brilho do fundo
+/// e ao [DefaultTextStyle] do app, sem depender de [AppBarTheme] ou [Theme].
+class _AppBarDefaults {
+  _AppBarDefaults(this.context, {Brightness? brightness})
+    : _isDark = brightness != null
+          ? brightness == Brightness.dark
+          : _detectIsDark(context);
 
   final BuildContext context;
-  late final ThemeData _theme = Theme.of(context);
-  late final ColorScheme _colors = _theme.colorScheme;
-  late final TextTheme _textTheme = _theme.textTheme;
+  final bool _isDark;
 
-  @override
-  Color? get backgroundColor => _colors.surface;
+  static bool _detectIsDark(BuildContext context) {
+    final Color? ambientTextColor = DefaultTextStyle.of(context).style.color;
+    if (ambientTextColor != null &&
+        ambientTextColor != const Color(0xFF000000)) {
+      return ambientTextColor.computeLuminance() > 0.5;
+    }
+    return MediaQuery.maybePlatformBrightnessOf(context) == Brightness.dark;
+  }
 
-  @override
-  Color? get foregroundColor => _colors.onSurface;
+  static Color resolveDefaultBackground(BuildContext context) {
+    return _detectIsDark(context)
+        ? const Color(0xFF1E1E24)
+        : const Color(0xFFF8F9FA);
+  }
 
-  @override
-  Color? get shadowColor => Colors.transparent;
+  Color get backgroundColor =>
+      _isDark ? const Color(0xFF1E1E24) : const Color(0xFFF8F9FA);
 
-  @override
-  Color? get surfaceTintColor => _colors.surfaceTint;
+  Color get foregroundColor =>
+      _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF18181B);
 
-  @override
-  IconThemeData? get iconTheme => IconThemeData(
-    color: _colors.onSurface,
+  Color get onSurfaceVariant =>
+      _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+
+  IconThemeData get iconTheme => IconThemeData(
+    color: foregroundColor,
     size: 24.0,
   );
 
-  @override
-  IconThemeData? get actionsIconTheme => IconThemeData(
-    color: _colors.onSurfaceVariant,
+  IconThemeData get actionsIconTheme => IconThemeData(
+    color: foregroundColor,
     size: 24.0,
   );
 
-  @override
-  TextStyle? get toolbarTextStyle => _textTheme.bodyMedium;
+  TextStyle get toolbarTextStyle {
+    final TextStyle base = DefaultTextStyle.of(context).style;
+    return base.copyWith(
+      fontSize: 14.0,
+      fontWeight: FontWeight.w400,
+      color: foregroundColor,
+      decoration: TextDecoration.none,
+    );
+  }
 
-  @override
-  TextStyle? get titleTextStyle => _textTheme.titleLarge;
+  TextStyle get titleTextStyle {
+    final TextStyle base = DefaultTextStyle.of(context).style;
+    return base.copyWith(
+      fontSize: 20.0,
+      fontWeight: FontWeight.w600,
+      color: foregroundColor,
+      decoration: TextDecoration.none,
+    );
+  }
 }
